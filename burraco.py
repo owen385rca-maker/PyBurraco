@@ -195,14 +195,24 @@ class player :
       print('  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
 
 #----------------------------------------
+def clone_group( group_to_clone ) :
+   clone_of_group = group( list(group_to_clone.cards), group_to_clone.is_a_run, group_to_clone.still_in_hand )
+   return clone_of_group
+
+
+#----------------------------------------
 def clone_player( player_to_clone, name ) :
 
    clone_of_player = player( player_to_clone.hand, name )
 
-   clone_of_player.group_list = list( player_to_clone.group_list )
    clone_of_player.wildcard_identity = copy.deepcopy( player_to_clone.wildcard_identity )
-   clone_of_player.board_groups = list( player_to_clone.board_groups )
    clone_of_player.down = player_to_clone.down
+
+   for gr in player_to_clone.group_list :
+      clone_of_player.group_list.append( clone_group( gr ) )
+
+   for gr in player_to_clone.board_groups :
+      clone_of_player.board_groups.append( clone_group( gr ) )
 
    return clone_of_player
 
@@ -259,6 +269,8 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
       for gr in board_groups :
 
          if gr.has_wildcard : continue
+
+         if len(gr.cards) >= 7 : continue  # don't mess up a clean burraco
 
          if verb_level > 0 :
             print('  add_cards_with_wc_to_board_groups :  considering adding to this group - ', end='' )
@@ -1972,10 +1984,15 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
       if player.down and count_number_of_burracos( player.board_groups ) == 0 and "clone" not in player.name :
          if verb_level > 0 :
             print('  evaluate_pile : still need a burraco.  Check if we can get one with this pile by cloning player and playing a turn.' )
+            print('   state of real player' )
+            player.print_state()
          test_player = clone_player(player, "%s, clone" % (player.name) )
          test_player.hand.extend( pile )
          test_player.hand.sort()
          test_decks = list( decks )
+         if verb_level > 0 :
+            print('   state of clone player before play_turn_new_cards' )
+            test_player.print_state()
          test_hand, test_decks, test_group_list, discard_pc = play_turn_new_cards( pile, test_decks, rng, test_player, verb_level=verb_level )
          test_nb = count_number_of_burracos( test_player.board_groups )
          if test_nb > 0 :
@@ -1985,6 +2002,10 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
          else :
             if verb_level > 0 :
                print('\n\n     evaluate_pile : no new burraco with this pile.  done with clone.\n\n' )
+               print('  state of real player')
+               player.print_state()
+               print('   state of clone player before play_turn_new_cards' )
+               test_player.print_state()
 
       if verb_level > 0 :
          sp = list(pile)
