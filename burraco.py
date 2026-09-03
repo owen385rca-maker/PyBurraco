@@ -170,9 +170,9 @@ class player :
    def setup_initial_group_list(self, decks, rng) :
       self.group_list = check_for_groups( self.hand, verb_level=0 )
       joker_list = get_jokers( self.hand )
-      joker_group_list = check_for_wc_groups( joker_list, self.hand, self.group_list, decks, self.wildcard_identity, rng, verb_level=0 )
+      joker_group_list, self.hand, self.wildcard_identity = check_for_wc_groups( joker_list, self.hand, self.group_list, decks, self.wildcard_identity, rng, verb_level=0 )
       two_list = get_twos( self.hand, self.group_list, self.wildcard_identity )
-      two_group_list = check_for_wc_groups( two_list, self.hand, self.group_list, decks, self.wildcard_identity, rng, verb_level=0 )
+      two_group_list, self.hand, self.wildcard_identity = check_for_wc_groups( two_list, self.hand, self.group_list, decks, self.wildcard_identity, rng, verb_level=0 )
       self.group_list = check_for_groups( self.hand, verb_level=0 )
 
 
@@ -1120,6 +1120,8 @@ def print_hand4( hand, groups, wildcard_identity ) :
       print(Fore.BLACK)
    ncnig, ncnig_nwc = get_ncards_not_in_group( hand, groups )
    print('  hand :     %d cards,     %d cards not in groups,     %d non-wildcards not in groups' % (len(hand), ncnig, ncnig_nwc) )
+   print('  hand cards : ', end='' )
+   print( hand )
    points = calc_hand_points( hand, groups )
    print('     total points : %d\n' % points )
    return
@@ -1706,9 +1708,11 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
 
 
    if len(wc_list) == 0 :
-      return []
+      return [], hand, wildcard_identity
 
    added_wc_groups = []
+
+   used_wc_list = []
 
    for wc_pc in wc_list :
 
@@ -1801,9 +1805,22 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
             print( new_wc_groups[0][2].cards )
             exit()
 
+         for ngpc in new_wc_groups[0][2].cards :
+            if ngpc in used_wc_list :
+               print('  *** new wc group contains a card thats already been used in another new wc group.')
+               print('          card %d, wc %d, this group ' % (ngpc, wc_pc), end = '' )
+               new_wc_groups[0][2].print_group()
+               print('          already used wc list : ', end='' )
+               print( used_wc_list )
+               continue
+            if ngpc in wildcard_identity.keys() :
+               print('  *** this group contains %d, which is already in the wildcard_identity list.  not adding this group : ' % ngpc, end='')
+               new_wc_groups[0][2].print_group()
+               continue
          added_wc_groups.append( new_wc_groups[0][2] )
          group_list.append(new_wc_groups[0][2])
          hand.remove( wc_pc )
+         used_wc_list.append( wc_pc )
          fake_card = 0
          for pc in new_wc_groups[0][2].cards :
             if wc_is_two :
@@ -1824,7 +1841,7 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
 
 
 
-   return added_wc_groups
+   return added_wc_groups, hand, wildcard_identity
 
 #----------------------------------------
 def build_groups_for_suit( hand, suit, **kwargs ) :
@@ -2245,7 +2262,12 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             gr.print_group()
 
    joker_list = get_jokers( hand )
-   joker_group_list = check_for_wc_groups( joker_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+   #joker_group_list = check_for_wc_groups( joker_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+   joker_group_list = []
+   for jpc in joker_list :
+      tmp_joker_group_list, hand, wildcard_identity = check_for_wc_groups( [jpc], hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+      if len(tmp_joker_group_list) > 0 :
+         joker_group_list.extend( tmp_joker_group_list )
 
    if verb_level > 1 :
       if len(joker_group_list) > 0 :
@@ -2254,7 +2276,18 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             gr.print_group()
 
    two_list = get_twos( hand, group_list, wildcard_identity )
-   two_group_list = check_for_wc_groups( two_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+   #two_group_list = check_for_wc_groups( two_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+   two_group_list = []
+   for tpc in two_list :
+      this_two_is_already_in_a_group = False
+      for cgr in group_list :
+         if tpc in cgr.cards :
+            this_two_is_already_in_a_group = True
+            break
+      if this_two_is_already_in_a_group : continue
+      tmp_two_group_list, hand, wildcard_identity = check_for_wc_groups( [tpc], hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
+      if len(tmp_two_group_list) > 0 :
+         two_group_list.extend( tmp_two_group_list )
 
    if verb_level > 1 :
       if len(two_group_list) > 0 :
@@ -2285,11 +2318,18 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          gr.still_in_hand = False
          player.board_groups.append( gr )
          for pc in gr.cards :
-            if pc in hand :
+            if pc in player.hand :
                player.hand.remove(pc)
             else :
-               print('\n\n ****** trying to remove %d from hand but its not in hand!!')
+               print('\n\n ****** trying to remove %d from hand but its not in hand!!' % pc )
                print( player.hand )
+               print(' currently removing cards in hand for this group : ', end = '' )
+               gr.print_group()
+               player.print_state()
+               print(' full list of new groups:')
+               for pgr in group_list :
+                  pgr.print_group()
+               exit()
          player.hand.sort()
       if verb_level > 0 :
          player.print_state()
