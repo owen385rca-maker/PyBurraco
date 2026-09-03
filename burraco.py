@@ -1969,6 +1969,23 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
    ####---------
    elif n_pile > 1 :
 
+      if player.down and count_number_of_burracos( player.board_groups ) == 0 and "clone" not in player.name :
+         if verb_level > 0 :
+            print('  evaluate_pile : still need a burraco.  Check if we can get one with this pile by cloning player and playing a turn.' )
+         test_player = clone_player(player, "%s, clone" % (player.name) )
+         test_player.hand.extend( pile )
+         test_player.hand.sort()
+         test_decks = list( decks )
+         test_hand, test_decks, test_group_list, discard_pc = play_turn_new_cards( pile, test_decks, rng, test_player, verb_level=verb_level )
+         test_nb = count_number_of_burracos( test_player.board_groups )
+         if test_nb > 0 :
+            if verb_level > 0 :
+               print('         evaluate_pile : can get a burraco with this pile.  pick it up!')
+            return True
+         else :
+            if verb_level > 0 :
+               print('\n\n     evaluate_pile : no new burraco with this pile.  done with clone.\n\n' )
+
       if verb_level > 0 :
          sp = list(pile)
          sp.sort()
@@ -2183,10 +2200,14 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       print(' hand : ', end='' )
       print( hand )
 
+   ncnig, ncnig_nwc = get_ncards_not_in_group( player.hand, player.group_list )
+
    if down :
-      check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildcard_identity, verb_level=verb_level )
-      add_cards_to_board_groups( player, verb_level=verb_level )
-      add_cards_with_wc_to_board_groups( player, verb_level=verb_level )
+      nburracos = count_number_of_burracos( board_groups )
+      if nburracos > 0 or ncnig > 2 :
+         check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildcard_identity, verb_level=verb_level )
+         add_cards_to_board_groups( player, verb_level=verb_level )
+         add_cards_with_wc_to_board_groups( player, verb_level=verb_level )
 
 
 
@@ -2288,7 +2309,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       check_groups_for_clean_burraco( hand, group_list, wildcard_identity, verb_level=0 )
       ncnig, ncnig_nwc = get_ncards_not_in_group( hand, group_list )
 
-      if ncnig == 0 :
+      if ncnig == 0 and not player.down :
          if verb_level > 0 :
             print('   play_turn_new_cards : going down without a discard.' )
          discard_pc = 0
@@ -2610,6 +2631,8 @@ if __name__ == '__main__':
             print('\n\n ======= player 1 closed out!\n\n')
             player1.print_state()
             print('\n\n\n')
+            player2.print_state()
+            print('\n\n\n')
             exit()
          print('\n ---- turn %d, player 1, going down!\n\n' % ti )
          for gr in player1.group_list :
@@ -2630,6 +2653,8 @@ if __name__ == '__main__':
             if ncnig1 == 0 :
                print('\n\n ======= player 1 closed out!\n\n')
                player1.print_state()
+               print('\n\n\n')
+               player2.print_state()
                print('\n\n\n')
                exit()
 
@@ -2683,6 +2708,8 @@ if __name__ == '__main__':
             print('\n\n ======= player 2 closed out!\n\n')
             player2.print_state()
             print('\n\n\n')
+            player1.print_state()
+            print('\n\n\n')
             exit()
          print('\n ---- turn %d, player 2, going down!\n\n' % ti )
          for gr in player2.group_list :
@@ -2703,6 +2730,8 @@ if __name__ == '__main__':
             if ncnig2 == 0 :
                print('\n\n ======= player 2 closed out!\n\n')
                player2.print_state()
+               print('\n\n\n')
+               player1.print_state()
                print('\n\n\n')
                exit()
 
