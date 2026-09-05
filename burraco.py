@@ -50,7 +50,11 @@ class group :
    def print_group(self) :
       print('(', end='')
       for pc in self.cards :
-         print(' %d ' % pc, end='')
+         d = get_deck(pc)
+         if d == 0 or d == 3 :
+            print(' %.5f ' % pc, end='')
+         else :
+            print(' %d ' % pc, end='')
       print(') ', end='')
       if self.still_in_hand : print('h', end='')
       if self.has_wildcard : print('w', end='')
@@ -295,14 +299,15 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
                   elif cn == (gr_last_cn + 2) :
                      fake_card = gr_suit*1000 + (cn - 1)*10
                   if get_deck(wcpc) > 0 : fake_card = fake_card + 3
+                  fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wcpc )
                   candidate_group_cards = list( gr.cards )
-                  candidate_group_cards.append( fake_card )
+                  candidate_group_cards.append( fake_card_with_true_id_encoded )
                   candidate_group_cards.append( hpc )
                   candidate_group_cards.sort()
                   is_a_run = True
                   still_in_hand = False
                   candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
-                  candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card ) )
+                  candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded ) )
                   if verb_level > 0 : candidate_group.print_group()
                   found_a_sandwich = True
 
@@ -321,13 +326,14 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
                if fake_card_cn >= 1 and fake_card_cn <= 14 :
                   fake_card = gr_suit*1000 + fake_card_cn*10
                   if get_deck(wcpc) > 0 : fake_card = fake_card + 3
+                  fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wcpc )
                   candidate_group_cards = list( gr.cards )
-                  candidate_group_cards.append( fake_card )
+                  candidate_group_cards.append( fake_card_with_true_id_encoded )
                   candidate_group_cards.sort()
                   is_a_run = True
                   still_in_hand = False
                   candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
-                  candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card) )
+                  candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded) )
                   if verb_level > 0 : candidate_group.print_group()
 
          else :
@@ -338,13 +344,14 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
 
             fake_card = 1000 + gr_cn*10
             if get_deck(wcpc) > 0 : fake_card = fake_card + 3
+            fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wcpc )
             candidate_group_cards = list( gr.cards )
-            candidate_group_cards.append( fake_card )
+            candidate_group_cards.append( fake_card_with_true_id_encoded )
             candidate_group_cards.sort()
             is_a_run = True
             still_in_hand = False
             candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
-            candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card) )
+            candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded) )
             if verb_level > 0 : candidate_group.print_group()
 
 
@@ -364,10 +371,10 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
          old_group = sorted_candidate_old_new_group_pairs[0][1]
          new_group = sorted_candidate_old_new_group_pairs[0][2]
          wcpc      = sorted_candidate_old_new_group_pairs[0][3]
-         fake_card = sorted_candidate_old_new_group_pairs[0][4]
+         fake_card_with_true_id_encoded = sorted_candidate_old_new_group_pairs[0][4]
 
          hand.remove( wcpc )
-         player.wildcard_identity[wcpc] = fake_card
+         player.wildcard_identity[wcpc] = fake_card_with_true_id_encoded
          if old_group not in board_groups :
             print(' *** where did old group go???')
             print('  old_group - ', end='' )
@@ -375,7 +382,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
             print('  new_group - ', end='' )
             new_group.print_group()
             print('  wcpc - %d' % wcpc )
-            print('  fake_card - %d' % fake_card )
+            print('  fake_card - %d, %.5f' % (fake_card_with_true_id_encoded, fake_card_with_true_id_encoded) )
             print('     board_groups:')
             for pbg in board_groups:
                pbg.print_group()
@@ -946,6 +953,14 @@ def count_suit( hand, suit ) :
       s = get_suit( pc )
       if s == suit : rv = rv + 1
    return rv
+
+#----------------------------------------
+def get_true_card( key ) :
+   return math.floor( (key*100000) % 10000 )
+
+#----------------------------------------
+def make_fake_card_pc_with_true_id_encoded( fake_card, true_pc ) :
+   return fake_card + true_pc / 100000
 
 #----------------------------------------
 def get_card_from_deck( deck ) :
@@ -1617,7 +1632,7 @@ def play_turn_card_from_deck( hand, board_groups, decks, wildcard_identity, rng,
 
    new_pc, decks = get_card_from_deck( decks )
    if new_pc == 0 :
-      print('\n\n ======== no more cards!\n\n' )
+      #print('\n\n ======== no more cards!\n\n' )
       return hand, decks, [], 0
 
    if verb_level > 0 :
@@ -1739,18 +1754,26 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
 
             fake_card = suit*1000 + wcn*10
             if wc_is_two : fake_card = fake_card + 3 # twos are deck 3, jokers are deck 0
+            fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wc_pc )
 
 
-            if fake_card in cards_in_suit or (fake_card-3) in cards_in_suit :
-               if verb_level > 0 :
-                  print('  * check_for_wc_groups: already have a wildcard with %d in hand, so skipping this.' % fake_card )
-               continue
+            #if fake_card in cards_in_suit or (fake_card-3) in cards_in_suit :
+            #   if verb_level > 0 :
+            #      print('  * check_for_wc_groups: already have a wildcard with %d in hand, so skipping this.' % fake_card )
+            #   continue
+            for cispc in cards_in_suit :
+               int_pc = math.floor(cispc)
+               if int_pc == fake_card or int_pc == (fake_card-3) :
+                  if verb_level > 0 :
+                     print('  * check_for_wc_groups: already have a wildcard with %d in hand, so skipping this.' % fake_card )
+                  continue
+
 
             temp_hand = list( cards_in_suit )
             if fake_card == 0 :
                print('>>>>>> 3 attempting to add zero card to hand!')
                exit()
-            temp_hand.append( fake_card )
+            temp_hand.append( fake_card_with_true_id_encoded )
             temp_hand.sort()
 
             if verb_level > 0 :
@@ -1778,7 +1801,7 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
                            print('  check_for_wc_groups: group already in list: ', end='' )
                            print(gr.cards)
                      else :
-                        if fake_card in gr.cards :
+                        if fake_card_with_true_id_encoded in gr.cards :
                            ncnig, ncnig_nwc = get_ncards_not_in_group( gr.cards, group_list )
                            ave_nturns = calc_ave_nturns_for_suit_no_wc( temp_hand, suit, decks, rng, ntimes=100, min_run_length=7 )
                            if verb_level > 0 :
@@ -1821,22 +1844,22 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
          group_list.append(new_wc_groups[0][2])
          hand.remove( wc_pc )
          used_wc_list.append( wc_pc )
-         fake_card = 0
+         fake_card_with_true_id_encoded = 0
          for pc in new_wc_groups[0][2].cards :
             if wc_is_two :
                if get_deck( pc ) == 3 :
-                  fake_card = pc
+                  fake_card_with_true_id_encoded = pc
                   break
             else :
                if get_deck( pc ) == 0 :
-                  fake_card = pc
+                  fake_card_with_true_id_encoded = pc
                   break
-         if fake_card > 0 :
-            hand.append( fake_card )
+         if fake_card_with_true_id_encoded > 0 :
+            hand.append( fake_card_with_true_id_encoded )
             hand.sort()
-            wildcard_identity[wc_pc] = fake_card
+            wildcard_identity[wc_pc] = fake_card_with_true_id_encoded
             if verb_level > 0 :
-               print(' hand after adding fake card : %d ' % fake_card, end='' )
+               print(' hand after adding fake card : %d, %.5f ' % (fake_card_with_true_id_encoded, fake_card_with_true_id_encoded), end='' )
                print(hand)
 
 
@@ -2148,14 +2171,16 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
 
                if get_suit( true_wc_pc ) != 0 : new_fake_card = new_fake_card + 3
 
+               fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( new_fake_card, true_wc_pc )
+
                if verb_level > 0 :
                   print('  get_suit(gr.cards[0]) = %d, gr_first_cn = %d, gr_last_cn = %d, new_fake_card = %d, true_wc_pc = %d'
                    %(get_suit(gr.cards[0]), gr_first_cn, gr_last_cn,  new_fake_card, true_wc_pc ) )
 
-               gr.cards.append( new_fake_card )
+               gr.cards.append( fake_card_with_true_id_encoded )
                gr.cards.sort()
 
-               wildcard_identity[true_wc_pc] = new_fake_card
+               wildcard_identity[true_wc_pc] = fake_card_with_true_id_encoded
 
                if verb_level > 0 :
                   print('   check_for_deployed_wc_replacement_in_board_groups : new group after replacing deployed wc - ', end='')
@@ -2587,6 +2612,113 @@ def ave_nturns_to_go_down( hand, board_groups, decks, wildcard_identity, down, p
    return ave_nturns, ave_nb, ave_npoints
 
 
+#----------------------------------------
+
+def check_all_cards( player1, player2, decks, pile, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   if verb_level > 1 :
+
+      print('\n\n ---------------- check_all_cards ----------------\n')
+
+      player1.print_state()
+      player2.print_state()
+      print('  decks  %d : ' % len(decks), end='' )
+      print( decks )
+      print()
+
+   all_cards = []
+   all_cards.extend( decks )
+   all_cards.extend( pile )
+   for pc in player1.hand :
+      if is_deployed_wildcard( pc ) :
+         all_cards.append( get_true_wildcard_from_fake_card( pc, player1.wildcard_identity) )
+      else :
+         all_cards.append( pc )
+   for pc in player2.hand :
+      if is_deployed_wildcard( pc ) :
+         all_cards.append( get_true_wildcard_from_fake_card( pc, player2.wildcard_identity) )
+      else :
+         all_cards.append( pc )
+   if player1.down :
+      for gr in player1.board_groups :
+         for pc in gr.cards :
+            if is_deployed_wildcard( pc ) :
+               all_cards.append( get_true_wildcard_from_fake_card( pc, player1.wildcard_identity) )
+            else :
+               all_cards.append( pc )
+   if player2.down :
+      for gr in player2.board_groups :
+         for pc in gr.cards :
+            if is_deployed_wildcard( pc ) :
+               all_cards.append( get_true_wildcard_from_fake_card( pc, player2.wildcard_identity) )
+            else :
+               all_cards.append( pc )
+   all_cards.sort()
+
+   if verb_level > 1 :
+      print('  all cards  %d : ' % len(all_cards), end='' )
+      print( all_cards )
+
+   correct_reference = [301, 302, 311, 312, 1011, 1012, 1021, 1022, 1031, 1032, 1041, 1042, 1051, 1052, 1061, 1062, 1071, 1072, 1081, 1082, 1091, 1092, 1101, 1102, 1111, 1112, 1121, 1122, 1131, 1132, 2011, 2012, 2021, 2022, 2031, 2032, 2041, 2042, 2051, 2052, 2061, 2062, 2071, 2072, 2081, 2082, 2091, 2092, 2101, 2102, 2111, 2112, 2121, 2122, 2131, 2132, 3011, 3012, 3021, 3022, 3031, 3032, 3041, 3042, 3051, 3052, 3061, 3062, 3071, 3072, 3081, 3082, 3091, 3092, 3101, 3102, 3111, 3112, 3121, 3122, 3131, 3132, 4011, 4012, 4021, 4022, 4031, 4032, 4041, 4042, 4051, 4052, 4061, 4062, 4071, 4072, 4081, 4082, 4091, 4092, 4101, 4102, 4111, 4112, 4121, 4122, 4131, 4132]
+
+   n_bad = 0
+   for i in range(108) :
+      if verb_level > 1 :
+         print('  %3d :  now %4d  ,  reference %4d' % (i, all_cards[i], correct_reference[i]) )
+      if all_cards[i] != correct_reference[i] :
+         print('  *** check_all_cards : disagreement with reference - position %3d, %4d not %4d' % (i, all_cards[i], correct_reference[i]) )
+         n_bad = n_bad + 1
+
+   if n_bad > 0 or len( all_cards ) != 108 :
+      print('  *** check_all_cards :  number of disagreements with reference %d' % n_bad )
+
+      if len( all_cards ) != 108 :
+         print('  *** check_all_cards :  currently have %d cards.  expected 108.' % len( all_cards ) )
+
+      print('     player 1 hand, %3d cards : ' % len(player1.hand), end='' )
+      print( player1.hand )
+      print('     player 2 hand, %3d cards : ' % len(player2.hand), end='' )
+      print( player2.hand )
+      print('     pile,          %3d cards : ' % len(pile), end='' )
+      print( pile )
+      print('     decks,         %3d cards : ' % len(decks), end='' )
+      decks_sorted = list(decks)
+      decks_sorted.sort()
+      print( decks_sorted )
+      if player1.down :
+         down_cards = []
+         for gr in player1.board_groups :
+            for pc in gr.cards :
+               if is_deployed_wildcard( pc ) :
+                  down_cards.append( get_true_wildcard_from_fake_card( pc, player1.wildcard_identity) )
+               else :
+                  down_cards.append( pc )
+         print('    player 1 down, %3d cards : ' % len(down_cards), end='' )
+         down_cards.sort()
+         print( down_cards )
+      if player2.down :
+         down_cards = []
+         for gr in player2.board_groups :
+            for pc in gr.cards :
+               if is_deployed_wildcard( pc ) :
+                  down_cards.append( get_true_wildcard_from_fake_card( pc, player2.wildcard_identity) )
+               else :
+                  down_cards.append( pc )
+         print('    player 2 down, %3d cards : ' % len(down_cards), end='' )
+         down_cards.sort()
+         print( down_cards )
+
+      return False
+
+   if verb_level > 0 :
+      print('  check_all_cards : all good' )
+
+   return True
+
 
 #===  main  ==========================================================================================================
 
@@ -2639,6 +2771,8 @@ if __name__ == '__main__':
 
 
    pile = []
+
+   check_all_cards( player1, player2, decks, pile, verb_level=1 )
 
    new_pc, decks = get_card_from_deck( decks )
    if new_pc == 0 :
@@ -2703,6 +2837,7 @@ if __name__ == '__main__':
          player1.group_list = []
          player1.down = True
          player1.hand = decks[-11:]
+         decks = decks[:-11]
          player1.hand.sort()
          player1.print_state()
          if discard_pc == 0 :
@@ -2727,10 +2862,12 @@ if __name__ == '__main__':
       print('\n --- pile after player 1: ', end='' )
       print( pile )
 
+      check_all_cards( player1, player2, decks, pile, verb_level=1 )
 
       if not batch :
          answ = input(' pausing...')
          if answ == 'q' : exit()
+         if answ == 'c' : batch = True
 
 
 
@@ -2780,6 +2917,7 @@ if __name__ == '__main__':
          player2.group_list = []
          player2.down = True
          player2.hand = decks[-11:]
+         decks = decks[:-11]
          player2.hand.sort()
          player2.print_state()
          if discard_pc == 0 :
@@ -2803,9 +2941,12 @@ if __name__ == '__main__':
       print('\n --- pile after player 2: ', end='' )
       print( pile )
 
+      check_all_cards( player1, player2, decks, pile, verb_level=1 )
+
       if not batch :
          answ = input(' pausing...')
          if answ == 'q' : exit()
+         if answ == 'c' : batch = True
 
 
    print('\n\n')
