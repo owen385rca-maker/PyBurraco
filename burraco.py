@@ -2295,6 +2295,105 @@ def check_for_group_overlaps( group_list, **kwargs ) :
 
    return group_list
 
+#----------------------------------------
+
+def try_to_assign_wc_to_group( hand, group_list, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   nc = 0
+   wc_pc = 0
+   for pc in hand :
+      if not is_in_a_group( pc, group_list ) :
+         nc = nc + 1
+         c = get_card( pc )
+         d = get_deck( pc )
+         s = get_suit( pc )
+         is_wc = False
+         if c == 2 or s == 0 :
+            wc_pc = pc
+            break
+         if d == 0 or d == 3 :
+            print(' *** try_to_assign_wc_to_group :  found deployed wc in hand but not in a group.  Converting to original wc.' )
+            true_wc = get_true_card( pc )
+            d = get_deck( pc )
+            c = get_card( pc )
+            s = get_suit( pc )
+            if true_wc != 0 and s == 0 and true_wc > 300 and true_wc < 400 :
+               print('          was a joker: pc = %.5f, wc= %d' % (pc, true_wc) )
+               wc_pc = true_wc
+            elif c == 2 and s != 0 :
+               print('          was a two: pc = %.5f, wc= %d' % (pc, true_wc) )
+               wc_pc = true_wc
+
+   if wc_pc == 0 :
+      print(' *** try_to_assign_wc_to_group : cant find wc in hand.' )
+      return hand, group_list
+
+   candidate_groups = []
+   for gr in group_list :
+
+      if count_deployed_wildcard( gr.cards ) > 0 : continue
+
+      if len(gr.cards) >= 7 : continue
+
+      candidate_groups.append( (len(gr.cards), gr) )
+
+   if len(candidate_groups) == 0 :
+      if verb_level > 0 :
+         print('  try_to_assign_wc_to_group : no candidate groups to add the wc to.')
+         return hand, group_list
+
+
+   candidate_groups_sorted = sorted( candidate_groups, key=lambda x: x[0], reverse=True )
+
+   gr_to_expand = candidate_groups_sorted[0][1]
+   if verb_level > 0 :
+      print('  try_to_assign_wc_to_group : going to add wc %d to this group : ', end='')
+      gr_to_expand.print_group2()
+
+   fake_card_with_true_id_encoded = 0
+
+   if gr_to_expand.is_a_run :
+      fc_s = get_suit(gr_to_expand.cards[0])
+      gr_first_cn = gr_to_expand.first_card()
+      gr_last_cn  = gr_to_expand.last_card()
+      if abs(gr_first_cn-7) < abs(gr_last_cn-7) and gr_first_cn >= 1 :
+        fc_cn = gr_first_cn - 1
+      else :
+        fc_cn = gr_last_cn + 1
+      if fc_cn > 14 or fc_cn < 1 :
+         print('  *** try_to_assign_wc_to_group : illegal fake card number.  %d' % fc_cn )
+         return hand, group_list
+      fake_card = fc_s*1000 + fc_cn*10
+      if get_deck( wc_pc ) > 0 : fake_card = fake_card + 3
+      fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wc_pc )
+
+
+   else :
+      fc_cn = get_card( gr_to_expand.cards[0] )
+      fake_card = 1000 + fc_cn*10
+      if get_deck( wc_pc ) > 0 : fake_card = fake_card + 3
+      fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, wc_pc )
+
+   if fake_card_with_true_id_encoded == 0 :
+      print('  *** try_to_assign_wc_to_group : failed to generate fake card from wc' )
+      return hand, group_list
+
+   gr_to_expand.cards.append( fake_card_with_true_id_encoded )
+   gr_to_expand.cards.sort()
+
+   hand.remove( wc_pc )
+
+   if verb_level > 0 :
+      print('  try_to_assign_wc_to_group : group after adding wc %d :' % fake_card_with_true_id_encoded, end='' )
+      gr_to_expand.print_group2()
+
+
+   return hand, group_list
+
 
 
 
@@ -2458,9 +2557,11 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       ncnig, ncnig_nwc = get_ncards_not_in_group( hand, group_list )
 
       if n_saved > 0 and ncnig == 1 and ncnig_nwc == 0 :
-         print(' *** last card is wc after saving clean burraco.  Figure out how to reassign the wc.  ****.')
+         print(' Last card is wc after saving clean burraco.  .')
+         hand, group_list = try_to_assign_wc_to_group( hand, group_list, verb_level=1 )
 
 
+      ncnig, ncnig_nwc = get_ncards_not_in_group( hand, group_list )
 
       if ncnig == 0 and not player.down :
          if verb_level > 0 :
@@ -2746,6 +2847,7 @@ def check_all_cards( player1, player2, decks, pile, **kwargs ) :
       if len( all_cards ) != 108 :
          print('  *** check_all_cards :  currently have %d cards.  expected 108.' % len( all_cards ) )
 
+      print('\n     number of cards : %d, expect 108' % len(all_cards) )
       print('     player 1 hand, %3d cards : ' % len(player1.hand), end='' )
       print( player1.hand )
       print('     player 2 hand, %3d cards : ' % len(player2.hand), end='' )
@@ -2783,6 +2885,7 @@ def check_all_cards( player1, player2, decks, pile, **kwargs ) :
          if all_cards[ci] == all_cards[ci+1] :
             print('  Cards in positions %d and %d same.  %d, %d' % (ci, ci+1, all_cards[ci], all_cards[ci+1] ) )
 
+      print()
       return False
 
    if verb_level > 0 :
@@ -2932,7 +3035,7 @@ if __name__ == '__main__':
 
       pile.append( discard_pc )
 
-      print('\n --- pile after player 1: ', end='' )
+      print('\n --- turn %d, pile after player 1: ' % ti , end='' )
       print( pile )
 
       check_all_cards( player1, player2, decks, pile, verb_level=1 )
@@ -3013,7 +3116,7 @@ if __name__ == '__main__':
 
       pile.append( discard_pc )
 
-      print('\n --- pile after player 2: ', end='' )
+      print('\n --- turn %d, pile after player 2: ' % ti, end='' )
       print( pile )
 
       check_all_cards( player1, player2, decks, pile, verb_level=1 )
