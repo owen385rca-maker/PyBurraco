@@ -46,6 +46,10 @@ class group :
       else :
          return False
 
+   def overlaps(self, other_gr ) :
+      for pc in self.cards :
+         if pc in other_gr.cards : return True
+      return False
 
    def print_group(self) :
       print('(', end='')
@@ -192,8 +196,9 @@ class player :
          print(' board groups:')
          for gr in self.board_groups:
             gr.print_group2()
-         total_points, burraco_points, card_points  = calc_board_points( self.board_groups )
-         print('    total points: %d,  burraco points %d,  card points %d' % (total_points, burraco_points, card_points) )
+         total_points, burraco_points, card_points, nb, nbc  = calc_board_points( self.board_groups )
+         print('    total points: %d,  burraco: %d regular, %d clean, points %d,  card points %d' %
+              (total_points, nb, nbc, burraco_points, card_points) )
       else :
          print(' Still up')
       print('  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
@@ -278,7 +283,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
 
          if verb_level > 0 :
             print('  add_cards_with_wc_to_board_groups :  considering adding to this group - ', end='' )
-            gr.print_group()
+            gr.print_group2()
 
          if gr.is_a_run :
 
@@ -308,7 +313,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
                   still_in_hand = False
                   candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
                   candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded ) )
-                  if verb_level > 0 : candidate_group.print_group()
+                  if verb_level > 0 : candidate_group.print_group2()
                   found_a_sandwich = True
 
             if not found_a_sandwich :
@@ -334,7 +339,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
                   still_in_hand = False
                   candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
                   candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded) )
-                  if verb_level > 0 : candidate_group.print_group()
+                  if verb_level > 0 : candidate_group.print_group2()
 
          else :
 
@@ -352,7 +357,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
             still_in_hand = False
             candidate_group = group( candidate_group_cards, is_a_run, still_in_hand )
             candidate_old_new_group_pairs.append( (len(candidate_group.cards), gr, candidate_group, wcpc, fake_card_with_true_id_encoded) )
-            if verb_level > 0 : candidate_group.print_group()
+            if verb_level > 0 : candidate_group.print_group2()
 
 
       if len( candidate_old_new_group_pairs ) > 0 :
@@ -364,9 +369,9 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
             for grp in sorted_candidate_old_new_group_pairs :
                print('          new group length %d, wildcard %d, fake card %d' % (grp[0], grp[3], grp[4]) )
                print('             old: ', end='' )
-               grp[1].print_group()
+               grp[1].print_group2()
                print('             new: ', end='' )
-               grp[2].print_group()
+               grp[2].print_group2()
 
          old_group = sorted_candidate_old_new_group_pairs[0][1]
          new_group = sorted_candidate_old_new_group_pairs[0][2]
@@ -378,14 +383,14 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
          if old_group not in board_groups :
             print(' *** where did old group go???')
             print('  old_group - ', end='' )
-            old_group.print_group()
+            old_group.print_group2()
             print('  new_group - ', end='' )
-            new_group.print_group()
+            new_group.print_group2()
             print('  wcpc - %d' % wcpc )
             print('  fake_card - %d, %.5f' % (fake_card_with_true_id_encoded, fake_card_with_true_id_encoded) )
             print('     board_groups:')
             for pbg in board_groups:
-               pbg.print_group()
+               pbg.print_group2()
             exit()
 
          board_groups.remove( old_group )
@@ -433,7 +438,7 @@ def add_cards_to_board_groups( player, **kwargs ) :
             if gr.is_card_addable( pc ) :
                if verb_level > 0 :
                   print('  add_cards_to_board_groups : adding %d to group ' % pc , end='' )
-                  gr.print_group()
+                  gr.print_group2()
                gr.cards.append( pc )
                gr.cards.sort()
                placed_cards_list.append( pc )
@@ -531,10 +536,11 @@ def check_groups_for_clean_burraco( hand, group_list, wildcard_identity, **kwarg
       if wc_index == -1 :
          return 0
 
-      if (wc_index >= 7) or (len(gr.cards) - wc_index >= 7) :
+      #if (wc_index >= 7) or (len(gr.cards) - wc_index >= 7) :
+      if (wc_index >= 7) or (len(gr.cards) - wc_index >= 8) :
          if verb_level > 0 :
             print('  check_groups_for_clean_burraco :  this group has a clean burraco that needs to be saved.')
-            gr.print_group()
+            gr.print_group2()
             print_hand4( hand, group_list, wildcard_identity )
          groups_to_save.append(gr)
          if (wc_index >= 7) :
@@ -575,7 +581,7 @@ def check_groups_for_clean_burraco( hand, group_list, wildcard_identity, **kwarg
          if verb_level > 0 :
             print_hand4( hand, group_list, wildcard_identity )
             for gr in group_list :
-               gr.print_group()
+               gr.print_group2()
 
 
    return len(groups_to_save)
@@ -655,7 +661,7 @@ def calc_board_points( board_groups ) :
 
    points_total = 100 * nb + 150 * nbsc + 200 * nbc + card_points
 
-   return points_total, (100 * nb + 150 * nbsc + 200 * nbc), card_points
+   return points_total, (100 * nb + 150 * nbsc + 200 * nbc), card_points, nb, nbc
 
 #----------------------------------------
 def count_number_of_burracos( groups ) :
@@ -1134,7 +1140,9 @@ def print_hand4( hand, groups, wildcard_identity ) :
                print(' %d ' % pc, end='' )
       print(Fore.BLACK)
    ncnig, ncnig_nwc = get_ncards_not_in_group( hand, groups )
-   print('  hand :     %d cards,     %d cards not in groups,     %d non-wildcards not in groups' % (len(hand), ncnig, ncnig_nwc) )
+   print('\n  hand :     ', Fore.GREEN, Style.NORMAL, '%d' % len(hand), Fore.RESET, Style.NORMAL, 'cards,     ',
+           Fore.RED, Style.BRIGHT, '%d' % ncnig, Fore.RESET, Style.NORMAL,
+           'cards not in groups,     %d non-wildcards not in groups\n' % (ncnig_nwc) )
    print('  hand cards : ', end='' )
    print( hand )
    points = calc_hand_points( hand, groups )
@@ -1806,7 +1814,7 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
                            ave_nturns = calc_ave_nturns_for_suit_no_wc( temp_hand, suit, decks, rng, ntimes=100, min_run_length=7 )
                            if verb_level > 0 :
                               print('  check_for_wc_groups: possible group for suit %d, wc position %d, n cards not in group %d, ave nt %.1f' % (suit, wcn, ncnig, ave_nturns) )
-                              gr.print_group()
+                              gr.print_group2()
                            new_wc_groups.append( (ncnig, ave_nturns, gr) )
 
 
@@ -1814,7 +1822,7 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
       for nwcg in new_wc_groups :
          if verb_level > 0 :
             print('  candidate new wc group : n cards not in group %d, ave nturns %.1f : ' % (nwcg[0], nwcg[1]), end='')
-            nwcg[2].print_group()
+            nwcg[2].print_group2()
          pass
 
       if len(new_wc_groups) > 0 :
@@ -1832,13 +1840,13 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
             if ngpc in used_wc_list :
                print('  *** new wc group contains a card thats already been used in another new wc group.')
                print('          card %d, wc %d, this group ' % (ngpc, wc_pc), end = '' )
-               new_wc_groups[0][2].print_group()
+               new_wc_groups[0][2].print_group2()
                print('          already used wc list : ', end='' )
                print( used_wc_list )
                continue
             if ngpc in wildcard_identity.keys() :
                print('  *** this group contains %d, which is already in the wildcard_identity list.  not adding this group : ' % ngpc, end='')
-               new_wc_groups[0][2].print_group()
+               new_wc_groups[0][2].print_group2()
                continue
          added_wc_groups.append( new_wc_groups[0][2] )
          group_list.append(new_wc_groups[0][2])
@@ -1985,7 +1993,7 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
          if gr.is_card_addable( pile_pc ) :
             if verb_level > 0 :
                print('       evaluate_pile :  card is addable to this group - ', end='' )
-               gr.print_group()
+               gr.print_group2()
             return True
 
       test_group_list = build_groups_for_suit( test_hand, pile_suit )
@@ -1994,7 +2002,7 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
             if pile_pc in gr.cards :
                if verb_level > 0 :
                   print('       evaluate_pile : can create this new group with the card - ', end='' )
-                  gr.print_group()
+                  gr.print_group2()
                return True
 
       #ng = 400
@@ -2128,7 +2136,7 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
 
             if verb_level > 0 :
                print('   check_for_deployed_wc_replacement_in_board_groups :  hand card %d can replace a wc in board group ' % pc, end='' )
-               gr.print_group()
+               gr.print_group2()
 
             wcpc = 0
             for gpc in gr.cards :
@@ -2138,7 +2146,7 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
 
             if wcpc == 0 :
                print(' *** check_for_deployed_wc_replacement_in_board_groups : cant find wc in group cards. ', end='')
-               gr.print_group()
+               gr.print_group2()
                break
 
             if pc in hand :
@@ -2184,7 +2192,7 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
 
                if verb_level > 0 :
                   print('   check_for_deployed_wc_replacement_in_board_groups : new group after replacing deployed wc - ', end='')
-                  gr.print_group()
+                  gr.print_group2()
 
    return
 
@@ -2247,6 +2255,51 @@ def check_for_deployed_wc_replacement_in_hand( hand, new_cards, wildcard_identit
 
 #----------------------------------------
 
+def check_for_group_overlaps( group_list, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   if len(group_list) < 2 : return group_list
+
+   remove_list = []
+   for i in range( len(group_list)-1 ) :
+      gri = group_list[i]
+      for j in range( i+1, len(group_list) ) :
+         grj = group_list[j]
+         if verb_level > 1 :
+            print('  check_for_group_overlaps : checking this group pair %d, %d' % (i,j) )
+            print('      group %d : ', end='' )
+            group_list[i].print_group2()
+            print('      group %d : ', end='' )
+            group_list[j].print_group2()
+         if gri.overlaps( grj ) :
+            if verb_level > 0 :
+               print('       check_for_group_overlaps : these overlap.' )
+               print('      group %d : ', end='' )
+               group_list[i].print_group2()
+               print('      group %d : ', end='' )
+               group_list[j].print_group2()
+            if len(gri.cards) > len(grj.cards ) :
+               remove_list.append( grj )
+            else :
+               remove_list.append( gri )
+
+   if len(remove_list) > 0 :
+      if verb_level > 0 :
+         print('   check_for_group_overlaps : removing these overlap groups' )
+      for gr in remove_list :
+         if verb_level > 0 : gr.print_group2()
+         group_list.remove( gr )
+
+   return group_list
+
+
+
+
+#----------------------------------------
+
 def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
    hand = player.hand
@@ -2260,8 +2313,9 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
 
    if verb_level > 0 :
-      print(' hand : ', end='' )
+      print(' hand : %d cards,  ' % len(hand), end='' )
       print( hand )
+      print(' new cards : ', new_cards )
 
    ncnig, ncnig_nwc = get_ncards_not_in_group( player.hand, player.group_list )
 
@@ -2284,7 +2338,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       if len(group_list) > 0 :
          print(' ++ group list')
          for gr in group_list :
-            gr.print_group()
+            gr.print_group2()
 
    joker_list = get_jokers( hand )
    #joker_group_list = check_for_wc_groups( joker_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
@@ -2298,7 +2352,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       if len(joker_group_list) > 0 :
          print('joker group list')
          for gr in joker_group_list :
-            gr.print_group()
+            gr.print_group2()
 
    two_list = get_twos( hand, group_list, wildcard_identity )
    #two_group_list = check_for_wc_groups( two_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
@@ -2318,14 +2372,16 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       if len(two_group_list) > 0 :
          print('two group list')
          for gr in two_group_list :
-            gr.print_group()
+            gr.print_group2()
+
+   group_list = check_for_group_overlaps( group_list, verb_level=0 )
 
    nofakind_group_list = check_for_nofakind_groups( hand, group_list, verb_level=0 )
    if verb_level > 1 :
       if len(nofakind_group_list) > 0 :
          print('nofakind group list')
          for gr in nofakind_group_list :
-            gr.print_group()
+            gr.print_group2()
 
 
    if verb_level > 0 :
@@ -2339,7 +2395,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          print('   Adding these groups to board:')
       for gr in group_list :
          if verb_level > 0 :
-            gr.print_group()
+            gr.print_group2()
          gr.still_in_hand = False
          player.board_groups.append( gr )
          for pc in gr.cards :
@@ -2349,11 +2405,11 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
                print('\n\n ****** trying to remove %d from hand but its not in hand!!' % pc )
                print( player.hand )
                print(' currently removing cards in hand for this group : ', end = '' )
-               gr.print_group()
+               gr.print_group2()
                player.print_state()
                print(' full list of new groups:')
                for pgr in group_list :
-                  pgr.print_group()
+                  pgr.print_group2()
                exit()
          player.hand.sort()
       if verb_level > 0 :
@@ -2384,7 +2440,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          print(' --- group list:')
       for gr in group_list :
          if verb_level > 0 :
-            gr.print_group()
+            gr.print_group2()
          if count_wc( gr.cards ) > 1 :
             if verb_level > 0 :
                print('\n\n *** illegal group.\n\n')
@@ -2392,8 +2448,19 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             group_list = check_for_groups( hand, verb_level=0 )
             if verb_level > 0 :
                print_hand4( hand, group_list, wildcard_identity )
-      check_groups_for_clean_burraco( hand, group_list, wildcard_identity, verb_level=0 )
+      n_saved = check_groups_for_clean_burraco( hand, group_list, wildcard_identity, verb_level=0 )
+      if n_saved > 0 and verb_level > 0 :
+         print(' *** Saved a clean burraco.')
+         print_hand4( hand, group_list, wildcard_identity )
+         for gr in group_list :
+            gr.print_group2()
+
       ncnig, ncnig_nwc = get_ncards_not_in_group( hand, group_list )
+
+      if n_saved > 0 and ncnig == 1 and ncnig_nwc == 0 :
+         print(' *** last card is wc after saving clean burraco.  Figure out how to reassign the wc.  ****.')
+
+
 
       if ncnig == 0 and not player.down :
          if verb_level > 0 :
@@ -2506,7 +2573,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
 
    if verb_level > 0 :
-      print(' play_turn_new_cards : hand without worst card, which was %d' % worst_card )
+      print('\n play_turn_new_cards : hand without worst card, which was ', Fore.RED, '%d\n' % worst_card, Fore.RESET )
       print(' %d : ' % len(hand), end='' )
       print( hand )
 
@@ -2518,7 +2585,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       print(' --- group list:')
    for gr in group_list :
       if verb_level > 0 :
-         gr.print_group()
+         gr.print_group2()
       if count_wc( gr.cards ) > 1 :
          if verb_level > 0 :
             print('\n\n *** illegal group.\n\n')
@@ -2532,7 +2599,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       print(' *** Saved a clean burraco.')
       print_hand4( hand, group_list, wildcard_identity )
       for gr in group_list :
-         gr.print_group()
+         gr.print_group2()
 
 
 
@@ -2712,6 +2779,10 @@ def check_all_cards( player1, player2, decks, pile, **kwargs ) :
          down_cards.sort()
          print( down_cards )
 
+      for ci in range(len(all_cards)-1) :
+         if all_cards[ci] == all_cards[ci+1] :
+            print('  Cards in positions %d and %d same.  %d, %d' % (ci, ci+1, all_cards[ci], all_cards[ci+1] ) )
+
       return False
 
    if verb_level > 0 :
@@ -2808,7 +2879,7 @@ if __name__ == '__main__':
          pile = []
       else :
          new_pc, decks = get_card_from_deck( decks )
-         print(' card from deck: %d' % new_pc  )
+         print('\n  ++++  card from deck: ', Fore.RED, '%d\n' % new_pc, Fore.RESET  )
          if new_pc == 0 :
             print('\n\n ======== no more cards!\n\n' )
             exit()
@@ -2816,7 +2887,7 @@ if __name__ == '__main__':
 
       player1.hand, decks, player1.group_list, discard_pc = play_turn_new_cards( turn_cards, decks, rng, player1, verb_level=1 )
       ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
-      print('  hand 1:    %d cards,     %d cards not in groups,        %d non-wildcards not in groups' % (len(player1.hand), ncnig1, ncnig_nwc1) )
+      #print('  hand 1:    ', Fore.RED, '%d' % len(player1.hand), Fore.RESET, ' cards,     %d cards not in groups,        %d non-wildcards not in groups' % (ncnig1, ncnig_nwc1) )
 
       if discard_pc == 0 :
          print('\n\n *** no discard! ***  \n\n')
@@ -2842,6 +2913,8 @@ if __name__ == '__main__':
          player1.print_state()
          if discard_pc == 0 :
             print('\n No discard so still playing this turn...\n')
+
+            turn_cards = []
 
             player1.hand, decks, player1.group_list, discard_pc = play_turn_new_cards( turn_cards, decks, rng, player1, verb_level=1 )
             ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
@@ -2888,7 +2961,7 @@ if __name__ == '__main__':
          pile = []
       else :
          new_pc, decks = get_card_from_deck( decks )
-         print(' card from deck: %d' % new_pc  )
+         print('\n  ++++  card from deck: ', Fore.RED, '%d\n' % new_pc, Fore.RESET  )
          if new_pc == 0 :
             print('\n\n ======== no more cards!\n\n' )
             exit()
@@ -2896,7 +2969,7 @@ if __name__ == '__main__':
 
       player2.hand, decks, player2.group_list, discard_pc = play_turn_new_cards( turn_cards, decks, rng, player2, verb_level=1 )
       ncnig2, ncnig_nwc2 = get_ncards_not_in_group( player2.hand, player2.group_list )
-      print('  hand 2:    %d cards,     %d cards not in groups,        %d non-wildcards not in groups' % (len(player2.hand), ncnig2, ncnig_nwc2) )
+      #print('  hand 2:    ', Fore.RED, '%d' % len(player2.hand), Fore.RESET,' cards,     %d cards not in groups,        %d non-wildcards not in groups' % (ncnig2, ncnig_nwc2) )
 
       if discard_pc == 0 :
          print('\n\n *** no discard! ***\n\n')
@@ -2922,6 +2995,8 @@ if __name__ == '__main__':
          player2.print_state()
          if discard_pc == 0 :
             print('\n No discard so still playing this turn...\n')
+
+            turn_cards = []
 
             player2.hand, decks, player2.group_list, discard_pc = play_turn_new_cards( turn_cards, decks, rng, player2, verb_level=1 )
             ncnig2, ncnig_nwc2 = get_ncards_not_in_group( player2.hand, player2.group_list )
