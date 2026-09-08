@@ -843,6 +843,7 @@ def get_twos( hand, group_list, wildcard_identity ) :
    for pc in hand :
       c = get_card( pc )
       if c == 2 :
+         if is_deployed_wildcard( pc ) : continue
          if not is_in_a_group( pc, group_list ) :
             if pc not in wildcard_identity :
                twos_list.append( pc )
@@ -962,7 +963,8 @@ def count_suit( hand, suit ) :
 
 #----------------------------------------
 def get_true_card( key ) :
-   return math.floor( (key*100000) % 10000 )
+   #return math.floor( (key*100000) % 10000 )
+   return round( (key*100000) % 10000 )
 
 #----------------------------------------
 def make_fake_card_pc_with_true_id_encoded( fake_card, true_pc ) :
@@ -1742,6 +1744,10 @@ def check_for_wc_groups( wc_list, hand, group_list, decks, wildcard_identity, rn
       if verb_level > 0 :
          print('---- check_for_wc_groups: checking wc %d' % wc_pc )
 
+      if is_deployed_wildcard( wc_pc ) :
+         print('  *** dont treat deployed wc as a true wc.  wc_pc = %.10f' % wc_pc)
+         continue
+
       wc_is_two = False
       if get_card( wc_pc ) == 2 : wc_is_two = True
 
@@ -1946,7 +1952,7 @@ def build_groups_for_suit( hand, suit, **kwargs ) :
 
 
 #----------------------------------------
-def evaluate_pile( pile, decks, player, **kwargs ) :
+def evaluate_pile( pile, decks, player, other_player, **kwargs ) :
 
    verb_level = 0
    if 'verb_level' in kwargs :
@@ -2101,6 +2107,11 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
 
       if player.down :
          if ave_nturns_hand_with_pile < (ave_nturns_hand - 3.0) :
+            if verb_level > 0 :
+               print('       evaluate_pile :  recommend picking up the pile.' )
+            return True
+      elif other_player.down :
+         if ave_nturns_hand_with_pile < ave_nturns_hand :
             if verb_level > 0 :
                print('       evaluate_pile :  recommend picking up the pile.' )
             return True
@@ -2688,7 +2699,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          wildcard_identity.pop( true_pc )
       else :
          if verb_level > 0 :
-            print('  true wc %d not in wildcard_identity?')
+            print('  true wc %d not in wildcard_identity?' % true_pc )
             print( wildcard_identity )
 
 
@@ -2994,7 +3005,7 @@ if __name__ == '__main__':
 
       player1.print_state()
 
-      pickup_pile = evaluate_pile( pile, decks, player1, verb_level=1 )
+      pickup_pile = evaluate_pile( pile, decks, player1, player2, verb_level=1 )
 
       ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
 
@@ -3076,7 +3087,7 @@ if __name__ == '__main__':
 
       player2.print_state()
 
-      pickup_pile = evaluate_pile( pile, decks, player2, verb_level=1 )
+      pickup_pile = evaluate_pile( pile, decks, player2, player1, verb_level=1 )
 
       ncnig2, ncnig_nwc2 = get_ncards_not_in_group( player2.hand, player2.group_list )
 
