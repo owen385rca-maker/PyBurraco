@@ -2675,6 +2675,24 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       hand.remove( worst_card )
       discard_pc = worst_card
 
+   if is_deployed_wildcard( worst_card ) and not is_in_a_group( worst_card, group_list ) and worst_card != 0 :
+      true_pc = get_true_card( worst_card )
+      if true_pc == 0 :
+         print('\n\n  *** cant get true card from this deployed wc: %.5f\n\n' % worst_card )
+         exit()
+      if verb_level > 0 :
+         print('  worst card is deployed wc.  Returning true wc for discard.  deployed = %.5f, true = %d' % (worst_card, true_pc) )
+      discard_pc = true_pc
+      worst_card = true_pc
+      if true_pc in wildcard_identity :
+         wildcard_identity.pop( true_pc )
+      else :
+         if verb_level > 0 :
+            print('  true wc %d not in wildcard_identity?')
+            print( wildcard_identity )
+
+
+
 
    if verb_level > 0 :
       print('\n    ++++ discard is : ', Fore.RED, '%d\n' % worst_card, Fore.RESET )
