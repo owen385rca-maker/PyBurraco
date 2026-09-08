@@ -2038,7 +2038,7 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
          test_player.hand.extend( pile )
          test_player.hand.sort()
          test_decks = list( decks )
-         if verb_level > 0 :
+         if verb_level > 1 :
             print('   state of clone player before play_turn_new_cards' )
             test_player.print_state()
          test_hand, test_decks, test_group_list, discard_pc = play_turn_new_cards( pile, test_decks, rng, test_player, verb_level=verb_level )
@@ -2048,7 +2048,7 @@ def evaluate_pile( pile, decks, player, **kwargs ) :
                print('         evaluate_pile : can get a burraco with this pile.  pick it up!')
             return True
          else :
-            if verb_level > 0 :
+            if verb_level > 1 :
                print('\n\n     evaluate_pile : no new burraco with this pile.  done with clone.\n\n' )
                print('  state of real player')
                player.print_state()
@@ -2242,7 +2242,7 @@ def check_for_deployed_wc_replacement_in_hand( hand, new_cards, wildcard_identit
             print('  after pop(s) : ', end='' )
             print(wildcard_identity)
 
-      if verb_level > 0 :
+      if verb_level > 1 :
          print('    adding %d to hand' % new_pc )
 
       if new_pc == 0 :
@@ -2316,7 +2316,8 @@ def try_to_assign_wc_to_group( hand, group_list, **kwargs ) :
             wc_pc = pc
             break
          if d == 0 or d == 3 :
-            print(' *** try_to_assign_wc_to_group :  found deployed wc in hand but not in a group.  Converting to original wc.' )
+            if verb_level > 1 :
+               print(' *** try_to_assign_wc_to_group :  found deployed wc in hand but not in a group.  Converting to original wc.' )
             true_wc = get_true_card( pc )
             d = get_deck( pc )
             c = get_card( pc )
@@ -2329,7 +2330,8 @@ def try_to_assign_wc_to_group( hand, group_list, **kwargs ) :
                wc_pc = true_wc
 
    if wc_pc == 0 :
-      print(' *** try_to_assign_wc_to_group : cant find wc in hand.' )
+      if verb_level > 1 :
+         print(' *** try_to_assign_wc_to_group : cant find wc in hand.' )
       return hand, group_list
 
    candidate_groups = []
@@ -2351,7 +2353,7 @@ def try_to_assign_wc_to_group( hand, group_list, **kwargs ) :
 
    gr_to_expand = candidate_groups_sorted[0][1]
    if verb_level > 0 :
-      print('  try_to_assign_wc_to_group : going to add wc %d to this group : ', end='')
+      print('  try_to_assign_wc_to_group : going to add wc %d to this group : ' % wc_pc, end='')
       gr_to_expand.print_group2()
 
    fake_card_with_true_id_encoded = 0
@@ -2411,7 +2413,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       verb_level = kwargs['verb_level']
 
 
-   if verb_level > 0 :
+   if verb_level > 1 :
       print(' hand : %d cards,  ' % len(hand), end='' )
       print( hand )
       print(' new cards : ', new_cards )
@@ -2557,7 +2559,8 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       ncnig, ncnig_nwc = get_ncards_not_in_group( hand, group_list )
 
       if n_saved > 0 and ncnig == 1 and ncnig_nwc == 0 :
-         print(' Last card is wc after saving clean burraco.  .')
+         if verb_level > 0 :
+            print(' Last card is wc after saving clean burraco.  .')
          hand, group_list = try_to_assign_wc_to_group( hand, group_list, verb_level=1 )
 
 
@@ -2674,7 +2677,9 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
 
    if verb_level > 0 :
-      print('\n play_turn_new_cards : hand without worst card, which was ', Fore.RED, '%d\n' % worst_card, Fore.RESET )
+      print('\n    ++++ discard is : ', Fore.RED, '%d\n' % worst_card, Fore.RESET )
+   if verb_level > 1 :
+      print('\n play_turn_new_cards : hand without worst card.' )
       print(' %d : ' % len(hand), end='' )
       print( hand )
 
@@ -2759,7 +2764,8 @@ def ave_nturns_to_go_down( hand, board_groups, decks, wildcard_identity, down, p
    for gi in range( ngames ) :
 
       this_nt, this_nb, this_npoints = q.get()
-      print(' %2d :  nt = %3d,  nb = %2d,  points = %4d ' % (gi, this_nt, this_nb, this_npoints) )
+      if verb_level > 1 :
+         print(' %2d :  nt = %3d,  nb = %2d,  points = %4d ' % (gi, this_nt, this_nb, this_npoints) )
 
       nturns_hist_data[this_nt] = nturns_hist_data[this_nt] + 1
       nb_sum = nb_sum + this_nb
@@ -2774,7 +2780,7 @@ def ave_nturns_to_go_down( hand, board_groups, decks, wildcard_identity, down, p
    decks = list(save_decks)
    wildcard_identity = copy.deepcopy( save_wcid )
 
-   if verb_level > 0 :
+   if verb_level > 1 :
       print('\n ave_nturns_to_go_down :  ave nturns =    %.2f   ,     ave nb = %d/%d =      %.2f ,    ave npoints =     %.1f\n' % (ave_nturns, nb_sum, ngames, ave_nb, ave_npoints) )
 
    return ave_nturns, ave_nb, ave_npoints
