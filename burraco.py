@@ -379,6 +379,13 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
          fake_card_with_true_id_encoded = sorted_candidate_old_new_group_pairs[0][4]
 
          hand.remove( wcpc )
+
+         for ngpc in new_group.cards :
+            if ngpc in hand :
+               if verb_level > 0 :
+                  print('   found another new group card to remove from hand.  Must have been a sandwich.  %d ' % ngpc )
+               hand.remove( ngpc )
+
          player.wildcard_identity[wcpc] = fake_card_with_true_id_encoded
          if old_group not in board_groups :
             print(' *** where did old group go???')
