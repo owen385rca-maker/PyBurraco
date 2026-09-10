@@ -2526,6 +2526,9 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          gr.print_group()
       print()
 
+
+   ok_to_regroup = True
+
    if player.down and len(group_list) > 0 :
 
       hand_after_adding_groups = list(hand)
@@ -2574,6 +2577,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
                   print('    Need to remove this group.  ', end='')
                   lgr.print_group2()
                groups_to_remove.append(lgr)
+               ok_to_regroup = False
 
          if len(groups_to_remove) > 0 :
             for lgr in groups_to_remove :
@@ -2793,8 +2797,9 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       print(' %d : ' % len(hand), end='' )
       print( hand )
 
-   group_list = check_for_groups( hand, verb_level=0, nwc_limit=2 )
-   nofakind_group_list = check_for_nofakind_groups( hand, group_list, verb_level=0 )
+   if ok_to_regroup :
+      group_list = check_for_groups( hand, verb_level=0, nwc_limit=2 )
+      nofakind_group_list = check_for_nofakind_groups( hand, group_list, verb_level=0 )
 
    if verb_level > 0 :
       print_hand4( hand, group_list, wildcard_identity )
