@@ -2381,9 +2381,9 @@ def try_to_assign_wc_to_group( hand, group_list, **kwargs ) :
       candidate_groups.append( (len(gr.cards), gr) )
 
    if len(candidate_groups) == 0 :
-      if verb_level > 0 :
+      if verb_level > 1 :
          print('  try_to_assign_wc_to_group : no candidate groups to add the wc to.')
-         return hand, group_list
+      return hand, group_list
 
 
    candidate_groups_sorted = sorted( candidate_groups, key=lambda x: x[0], reverse=True )
@@ -2527,29 +2527,86 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       print()
 
    if player.down and len(group_list) > 0 :
-      if verb_level > 0 :
-         print('   Adding these groups to board:')
-      for gr in group_list :
+
+      hand_after_adding_groups = list(hand)
+      for lgr in group_list :
+         for lpc in lgr.cards :
+            if lpc in hand_after_adding_groups :
+               hand_after_adding_groups.remove(lpc)
+
+      ok_to_add = True
+      if len( hand_after_adding_groups ) == 0 :
+         ok_to_add = False
          if verb_level > 0 :
-            gr.print_group2()
-         gr.still_in_hand = False
-         player.board_groups.append( gr )
-         for pc in gr.cards :
-            if pc in player.hand :
-               player.hand.remove(pc)
+            print('\n\n *********** Cant go down without a discard!  See if we can peel off a card.\n\n')
+         groups_to_remove = []
+         nb = count_number_of_burracos( board_groups )
+         min_n_cards_not_in_groups = 1
+         if nb == 0 :
+            if verb_level > 0 :
+               print('\n\n ******* Dont have burraco yet!  Need two cards not in groups to end this turn (one discard and one remaining)')
+            min_n_cards_not_in_groups = 2
+
+
+         for lgr in group_list :
+            if verb_level > 0 :
+               print('  looking at this group : ', end='')
+               lgr.print_group2()
+            if len(lgr.cards) >= (3 + min_n_cards_not_in_groups) :
+               if verb_level > 0 :
+                  print('     can reduce this one.')
+               cards_to_remove = []
+               if abs(lgr.first_card() - 7 ) < abs(lgr.last_card() - 7 ) :
+                  cards_to_remove.append(lgr.cards[-1])
+                  if min_n_cards_not_in_groups > 1 :
+                     cards_to_remove.append(lgr.cards[-2])
+               else :
+                  cards_to_remove.append(lgr.cards[0])
+                  if min_n_cards_not_in_groups > 1 :
+                     cards_to_remove.append(lgr.cards[1])
+               for lpc in cards_to_remove :
+                  if verb_level > 0 :
+                     print('      removing %d from group' % lpc )
+                  lgr.cards.remove( lpc )
+               ok_to_add = True
             else :
-               print('\n\n ****** trying to remove %d from hand but its not in hand!!' % pc )
-               print( player.hand )
-               print(' currently removing cards in hand for this group : ', end = '' )
+               if verb_level > 0 :
+                  print('    Need to remove this group.  ', end='')
+                  lgr.print_group2()
+               groups_to_remove.append(lgr)
+
+         if len(groups_to_remove) > 0 :
+            for lgr in groups_to_remove :
+               if verb_level > 0 :
+                  print('   removing this group : ', end='' )
+                  lgr.print_group2()
+               group_list.remove( lgr )
+
+
+      if ok_to_add :
+         if verb_level > 0 :
+            print('   Adding these groups to board:')
+         for gr in group_list :
+            if verb_level > 0 :
                gr.print_group2()
-               player.print_state()
-               print(' full list of new groups:')
-               for pgr in group_list :
-                  pgr.print_group2()
-               exit()
-         player.hand.sort()
-      if verb_level > 0 :
-         player.print_state()
+            gr.still_in_hand = False
+            player.board_groups.append( gr )
+            for pc in gr.cards :
+               if pc in player.hand :
+                  player.hand.remove(pc)
+               else :
+                  print('\n\n ****** trying to remove %d from hand but its not in hand!!' % pc )
+                  print( player.hand )
+                  print(' currently removing cards in hand for this group : ', end = '' )
+                  gr.print_group2()
+                  player.print_state()
+                  print(' full list of new groups:')
+                  for pgr in group_list :
+                     pgr.print_group2()
+                  exit()
+            player.hand.sort()
+         if verb_level > 0 :
+            player.print_state()
 
 
    best_run_suit, best_run_count, best_run_first_card = best_run( hand )
