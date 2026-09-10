@@ -543,7 +543,6 @@ def check_groups_for_clean_burraco( hand, group_list, wildcard_identity, **kwarg
       if wc_index == -1 :
          return 0
 
-      #if (wc_index >= 7) or (len(gr.cards) - wc_index >= 7) :
       if (wc_index >= 7) or (len(gr.cards) - wc_index >= 8) :
          if verb_level > 0 :
             print('  check_groups_for_clean_burraco :  this group has a clean burraco that needs to be saved.')
@@ -566,17 +565,33 @@ def check_groups_for_clean_burraco( hand, group_list, wildcard_identity, **kwarg
             other_groups.append( other_gr )
          else :
             if verb_level > 0 :
-               print('  check_groups_for_clean_burraco :  need to return deployed wildcard %d.' % wc_pc )
-               for true_wildcard, fake_card in wildcard_identity.items() :
-                  if fake_card == wc_pc :
-                     hand.remove( fake_card )
-                     if true_wildcard == 0 :
-                        print('>>>>>> 1 attempting to add zero card to hand!')
-                        exit()
-                     hand.append( true_wildcard )
-                     hand.sort()
-                     wildcard_identity.pop( true_wildcard )
-                     break
+               print('  check_groups_for_clean_burraco :  need to return deployed wildcard %.6f' % wc_pc )
+            #for true_wildcard, fake_card in wildcard_identity.items() :
+            #   if fake_card == wc_pc :
+            #      hand.remove( fake_card )
+            #      if true_wildcard == 0 :
+            #         print('>>>>>> 1 attempting to add zero card to hand!')
+            #         exit()
+            #      hand.append( true_wildcard )
+            #      hand.sort()
+            #      wildcard_identity.pop( true_wildcard )
+            #      break
+            true_wc = get_true_card( wc_pc )
+            if true_wc == 0 :
+               print('   *** true_wc == 0 ???  %.8f' % wc_pc)
+               exit()
+            #print(' *** debug 1 : adding true wc %d, from %d, to hand : ' % (true_wc, wc_pc), hand )
+            hand.remove( wc_pc )
+            hand.append( true_wc )
+            hand.sort()
+            if true_wc not in wildcard_identity :
+               if verb_level > 0 :
+                  print('  true_wc %d from %.6f not found in wildcard_identity :' % (true_wc, wc_pc), end = '' )
+                  print( wildcard_identity )
+                  print('  happened while saving this group')
+                  gr.print_group2()
+            else :
+               wildcard_identity.pop( true_wc )
 
       if len(groups_to_save) > 0 :
          for gr in groups_to_save :
@@ -704,6 +719,7 @@ def fix_illegal_group( group, hand, wildcard_identity, **kwargs ) :
       print( group.cards )
       print(' wildcard_identity ', end='' )
       print( wildcard_identity )
+      print(' hand  %d : ' % len(hand), hand  )
 
    wc_list = []
    for pc in group.cards :
@@ -742,13 +758,15 @@ def fix_illegal_group( group, hand, wildcard_identity, **kwargs ) :
       return 0
 
    hand.remove( largest_group_dropped_wcpc )
-   true_wildcard = get_true_wildcard_from_fake_card( largest_group_dropped_wcpc, wildcard_identity )
+   #true_wildcard = get_true_wildcard_from_fake_card( largest_group_dropped_wcpc, wildcard_identity )
+   true_wildcard = get_true_card( largest_group_dropped_wcpc )
    if true_wildcard == 0 :
       print('>>>>>> 2 fix_illegal_group : attempting to add zero card to hand!')
       print('  largest_group_dropped_wcpc %d' % largest_group_dropped_wcpc )
       print('  wildcard_identity : ', end='')
       print( wildcard_identity )
       exit()
+   #print(' *** debug 2 : adding %d to hand : ' % true_wildcard, hand )
    hand.append( true_wildcard )
    hand.sort()
    if true_wildcard in wildcard_identity :
@@ -760,6 +778,7 @@ def fix_illegal_group( group, hand, wildcard_identity, **kwargs ) :
       print(' hand : ', end='')
       print( hand )
       print_hand4(hand,[], wildcard_identity)
+      exit()
 
 
    return 0
@@ -2460,7 +2479,6 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             gr.print_group2()
 
    joker_list = get_jokers( hand )
-   #joker_group_list = check_for_wc_groups( joker_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
    joker_group_list = []
    for jpc in joker_list :
       tmp_joker_group_list, hand, wildcard_identity = check_for_wc_groups( [jpc], hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
@@ -2474,7 +2492,6 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             gr.print_group2()
 
    two_list = get_twos( hand, group_list, wildcard_identity )
-   #two_group_list = check_for_wc_groups( two_list, hand, group_list, decks, wildcard_identity, rng, verb_level=0 )
    two_group_list = []
    for tpc in two_list :
       this_two_is_already_in_a_group = False
@@ -2927,6 +2944,13 @@ def check_all_cards( player1, player2, decks, pile, **kwargs ) :
          if all_cards[ci] == all_cards[ci+1] :
             print('  Cards in positions %d and %d same.  %d, %d' % (ci, ci+1, all_cards[ci], all_cards[ci+1] ) )
 
+      if 0 in all_cards :
+         print('   A zero card got in somehow.')
+
+      for pc in correct_reference :
+         if not pc in all_cards :
+            print( '    card %d is missing' % pc )
+
       print()
       return False
 
@@ -3027,6 +3051,7 @@ if __name__ == '__main__':
          print('\n  ++++  card from deck: ', Fore.RED, '%d\n' % new_pc, Fore.RESET  )
          if new_pc == 0 :
             print('\n\n ======== no more cards!\n\n' )
+            print('  Game over after turn %d\n\n\n' % ti )
             exit()
          turn_cards.append( new_pc )
 
@@ -3044,6 +3069,7 @@ if __name__ == '__main__':
             print('\n\n\n')
             player2.print_state()
             print('\n\n\n')
+            print('  Game over after turn %d\n\n\n' % ti )
             exit()
          print('\n ---- turn %d, player 1, going down!\n\n' % ti )
          for gr in player1.group_list :
@@ -3070,6 +3096,7 @@ if __name__ == '__main__':
                print('\n\n\n')
                player2.print_state()
                print('\n\n\n')
+               print('  Game over after turn %d\n\n\n' % ti )
                exit()
 
          batch = False
@@ -3109,6 +3136,7 @@ if __name__ == '__main__':
          print('\n  ++++  card from deck: ', Fore.RED, '%d\n' % new_pc, Fore.RESET  )
          if new_pc == 0 :
             print('\n\n ======== no more cards!\n\n' )
+            print('  Game over after turn %d\n\n\n' % ti )
             exit()
          turn_cards.append( new_pc )
 
@@ -3126,6 +3154,7 @@ if __name__ == '__main__':
             print('\n\n\n')
             player1.print_state()
             print('\n\n\n')
+            print('  Game over after turn %d\n\n\n' % ti )
             exit()
          print('\n ---- turn %d, player 2, going down!\n\n' % ti )
          for gr in player2.group_list :
@@ -3152,6 +3181,7 @@ if __name__ == '__main__':
                print('\n\n\n')
                player1.print_state()
                print('\n\n\n')
+               print('  Game over after turn %d\n\n\n' % ti )
                exit()
 
          batch = False
