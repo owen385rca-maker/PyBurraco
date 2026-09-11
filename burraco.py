@@ -2537,13 +2537,18 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
             if lpc in hand_after_adding_groups :
                hand_after_adding_groups.remove(lpc)
 
+      nb = count_number_of_burracos( board_groups )
+
       ok_to_add = True
-      if len( hand_after_adding_groups ) == 0 :
+      #########if len( hand_after_adding_groups ) == 0 :
+      if len( hand_after_adding_groups ) == 0 or ( len( hand_after_adding_groups) == 1 and nb == 0 ) :
          ok_to_add = False
          if verb_level > 0 :
-            print('\n\n *********** Cant go down without a discard!  See if we can peel off a card.\n\n')
+            if len( hand_after_adding_groups ) == 0 :
+               print('\n\n *********** Cant go down without a discard!  See if we can peel off a card.\n\n')
+            if len( hand_after_adding_groups) == 1 and nb == 0 :
+               print('\n\n *********** Cant go down without burraco!\n\n')
          groups_to_remove = []
-         nb = count_number_of_burracos( board_groups )
          min_n_cards_not_in_groups = 1
          if nb == 0 :
             if verb_level > 0 :
