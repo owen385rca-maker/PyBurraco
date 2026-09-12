@@ -266,9 +266,13 @@ def interactive_choose_discard( player, pile ) :
    print()
 
    pci = 1
+   card_choices = []
    for pc in player.hand :
-      print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
-      pci += 1
+      if not is_in_a_group( pc, player.group_list ) :
+         print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
+         card_choices.append( pc )
+         pci += 1
+   n_choices = len( card_choices )
 
    answ = input( 'pick one:  ' )
 
@@ -276,19 +280,52 @@ def interactive_choose_discard( player, pile ) :
       intansw = int(answ)
    except :
       print(' not an int.  try again.')
-      interactive_choose_discard( player )
+      interactive_choose_discard( player, pile )
 
-   if intansw < 1 or intansw > len(player.hand) :
+   if intansw < 1 or intansw > n_choices :
       print('out of range.  try again')
-      interactive_choose_discard( player )
+      interactive_choose_discard( player, pile )
 
-   pc_discard = player.hand[intansw-1]
+   pc_discard = card_choices[ intansw-1 ]
 
    pile.append( pc_discard )
    player.hand.remove( pc_discard )
 
 
    return
+
+#----------------------------------------
+
+def check_if_cards_make_legal_group( group_cards ) :
+
+   if len( group_cards ) < 3 :
+      print(' *** need at least 3 cards.  ')
+      return False, False
+
+   is_a_run = True
+   if get_card( group_cards[1] ) == ( get_card( group_cards[0] ) + 1 ) :
+      is_a_run = True
+   elif get_card( group_cards[1] ) == get_card( group_cards[0] ) :
+      is_a_run = False
+   else :
+      return False, False
+
+   is_legal = True
+   if is_a_run :
+      for i in range( len(group_cards)-1 ) :
+         if get_card( group_cards[i] ) != ( get_card( group_cards[i+1] ) - 1 ) :
+            is_legal = False
+            break
+   else :
+      for i in range( len(group_cards)-1 ) :
+         if get_card( group_cards[i] ) != get_card( group_cards[i+1] ) :
+            is_legal = False
+            break
+
+   if is_legal :
+      return True, is_a_run
+
+   return False
 
 #----------------------------------------
 
@@ -307,15 +344,11 @@ def interactive_new_group( player ) :
       pci = 1
       card_choices = []
       for pc in player.hand :
-         for gr in player.group_list :
-            if pc in gr.cards : continue
-         if player.down :
-            for gr in player.board_groups :
-               if pc in gr.cards : continue
-         print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
-         card_choices.append( pc )
-         pci += 1
-      n_choices = pci
+         if not is_in_a_group( pc, player.group_list ) :
+            print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
+            card_choices.append( pc )
+            pci += 1
+      n_choices = len( card_choices )
 
       answ = input('  pick a card to add or enter d when done or c to cancel : ')
 
@@ -336,14 +369,14 @@ def interactive_new_group( player ) :
          chosen_card = card_choices[intansw-1]
 
          if get_suit( chosen_card ) == 0 :
-            chosen_card = interactive_get_fake_card( chosen_card )
+            chosen_card = interactive_get_fake_card( chosen_card, player )
 
          if get_card( chosen_card ) == 2 :
             answ = ''
             while answ != 'w' and answ != 't' :
                answ = input('  use as wildcard (w) or leave as a two (t) ? ')
             if answ == 'w' :
-               chosen_card = interactive_get_fake_card( chosen_card )
+               chosen_card = interactive_get_fake_card( chosen_card, player )
 
          group_cards.append( chosen_card )
 
@@ -351,32 +384,7 @@ def interactive_new_group( player ) :
 
    print('\n final group cards: ', group_cards )
 
-   if len( group_cards ) < 3 :
-      print(' *** need at least 3 cards.  try again')
-      interactive_new_group( player )
-
-   is_a_run = True
-   if get_card( group_cards[1] ) == ( get_card( group_cards[0] ) + 1 ) :
-      print('   is a run')
-      is_a_run = True
-   elif get_card( group_cards[1] ) == get_card( group_cards[0] ) :
-      print('   is not a run')
-      is_a_run = False
-   else :
-      print(' *** 1 not a legal group (run or nofakind) : ', group_cards )
-      return interactive_new_group( player )
-
-   is_legal = True
-   if is_a_run :
-      for i in range( len(group_cards)-1 ) :
-         if get_card( group_cards[i] ) != ( get_card( group_cards[i+1] ) - 1 ) :
-            is_legal = False
-            break
-   else :
-      for i in range( len(group_cards)-1 ) :
-         if get_card( group_cards[i] ) != get_card( group_cards[i+1] ) :
-            is_legal = False
-            break
+   is_legal, is_a_run = check_if_cards_make_legal_group( group_cards )
 
    if not is_legal :
       print(' *** 2 not a legal group (run or nofakind) : ', group_cards )
@@ -393,24 +401,188 @@ def interactive_new_group( player ) :
    return
 
 #----------------------------------------
-def interactive_get_fake_card( true_wc ) :
+def interactive_get_fake_card( true_wc, player ) :
    s_answ = input(' interactive_get_fake_card : choose suit for fake card (1-4) ')
    try :
       s_int = int(s_answ)
    except :
       print(' not an int.  try again.')
-      return interactive_get_fake_card( true_wc )
+      return interactive_get_fake_card( true_wc, player )
    c_answ = input(' interactive_get_fake_card : choose card number for fake card (1-14) ')
    try :
       c_int = int(c_answ)
    except :
       print(' not an int.  try again.')
-      return interactive_get_fake_card( true_wc )
+      return interactive_get_fake_card( true_wc, player )
    fake_card = s_int*1000 + c_int*10
    if get_deck( true_wc ) > 0 : fake_card = fake_card + 3
    fake_card_with_true_id_encoded = make_fake_card_pc_with_true_id_encoded( fake_card, true_wc )
    print('  interactive_get_fake_card :  generated %.5f   from   %d' % (fake_card_with_true_id_encoded, true_wc ) )
+   player.wildcard_identity[ true_wc ] = fake_card_with_true_id_encoded
+   player.hand.remove( true_wc )
+   player.hand.append( fake_card_with_true_id_encoded )
+   player.hand.sort()
    return fake_card_with_true_id_encoded
+
+
+#----------------------------------------
+def interactive_edit_group( player ) :
+
+   if len( player.group_list ) == 0 :
+      print(' *** no groups to edit.')
+      return
+
+   gi = 1
+   for gr in player.group_list :
+      print(' %2d : ' % gi, end='' )
+      gr.print_group2()
+      gi += 1
+
+   g_answ = input(' pick a group or d when done : ')
+
+   if g_answ == 'd' :
+      return
+
+   try :
+      g_int = int(g_answ)
+   except :
+      print(' not an int.  try again.')
+      return interactive_edit_group( player )
+
+   if g_int < 1 or g_int > len( player.group_list ) :
+      print('  %d is out of range (1-%d).  try again' % (g_int, len( player.group_list )) )
+      return interactive_edit_group( player )
+
+   group_to_edit = player.group_list[ g_int-1 ]
+
+   group_to_edit.print_group2()
+
+   answ = ''
+   while answ != 'd' :
+
+      if answ == 'x' :
+         for gpc in group_to_edit.cards :
+            if is_deployed_wildcard( gpc ) :
+               true_wc = get_true_card( gpc )
+               print('  returning true wildcard %d for %.5f to hand' % (true_wc, gpc) )
+               player.hand.remove( gpc )
+               player.hand.append( true_wc )
+               player.hand.sort()
+               player.wildcard_identity.pop( true_wc )
+         player.group_list.remove( group_to_edit )
+         return
+
+      if answ == 'r' :
+         pci = 1
+         card_choices = []
+         for pc in group_to_edit.cards :
+            if not is_in_a_group( pc, player.group_list ) :
+               print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
+               card_choices.append( pc )
+               pci += 1
+         n_choices = len(card_choices)
+         answ = input('    which one do you want to remove?  c for cancel : ')
+         if answ == 'c' : return
+
+         try :
+            c_int = int(answ)
+         except :
+            print(' not an int.  try again.')
+            return interactive_edit_group( player )
+
+         if c_int < 1 or c_int > n_choices :
+            print('  choice %d is out of range (1-%d).  try again' % (c_int, n_choices) )
+            return interactive_edit_group( player )
+
+         chosen_card = group_to_edit.cards[c_int-1]
+
+         if is_deployed_wildcard( chosen_card ) :
+            true_wc = get_true_card( chosen_card )
+            print('  returning true wildcard %d for %.5f to hand' % (true_wc, chosen_card) )
+            player.hand.remove( chosen_card )
+            player.hand.append( true_wc )
+            player.hand.sort()
+            player.wildcard_identity.pop( true_wc )
+
+         group_to_edit.cards.remove( chosen_card )
+
+         print('\n  group with card removed : ', end='' )
+         group_to_edit.print_group2()
+
+
+      if answ == 'a' :
+         pci = 1
+         card_choices = []
+         for pc in player.hand :
+            if not is_in_a_group( pc, player.group_list ) :
+               card_choices.append(pc)
+               print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
+               pci += 1
+         n_choices = len( card_choices )
+         answ = input('    which one do you want to add?  c for cancel : ')
+         if answ == 'c' : return
+
+         try :
+            c_int = int(answ)
+         except :
+            print(' not an int.  try again.')
+            return interactive_edit_group( player )
+
+         if c_int < 1 or c_int > n_choices :
+            print('  choice %d is out of range (1-%d).  try again' % (c_int, n_choices) )
+            return interactive_edit_group( player )
+
+         chosen_card = card_choices[c_int-1]
+
+         if get_suit( chosen_card ) == 0 :
+            chosen_card = interactive_get_fake_card( chosen_card, player )
+
+         if get_card( chosen_card ) == 2 :
+            answ = ''
+            while answ != 'w' and answ != 't' :
+               answ = input('  use as wildcard (w) or leave as a two (t) ? ')
+            if answ == 'w' :
+               chosen_card = interactive_get_fake_card( chosen_card, player )
+
+         group_cards = list( group_to_edit.cards )
+         group_cards.append( chosen_card )
+         group_cards.sort()
+         is_legal, is_a_run = check_if_cards_make_legal_group( group_cards )
+
+         if not is_legal :
+
+            print('  *** illegal group.  Try again')
+
+         else :
+
+            group_to_edit.cards.append( chosen_card )
+            group_to_edit.cards.sort()
+
+            print('\n  group with new card : ', end='' )
+            group_to_edit.print_group2()
+
+      print()
+      group_to_edit.print_group2()
+      print('  a - add a card')
+      print('  r - remove a card')
+      print('  x - ungroup the group')
+      print('  d - done')
+      answ = input( '    your choice: ')
+
+   is_legal, is_a_run = check_if_cards_make_legal_group( group_to_edit.cards )
+   if not is_legal :
+      print('  *** group is no longer legal  ugrouping it.')
+      for gpc in group_to_edit.cards :
+         if is_deployed_wildcard( gpc ) :
+            true_wc = get_true_card( gpc )
+            print('  returning true wildcard %d for %.5f to hand' % (true_wc, gpc) )
+            player.hand.remove( gpc )
+            player.hand.append( true_wc )
+            player.hand.sort()
+            player.wildcard_identity.pop( true_wc )
+      player.group_list.remove( group_to_edit )
+
+   return
 
 
 #----------------------------------------
@@ -3360,6 +3532,9 @@ if __name__ == '__main__':
 
          if choice1 == 'n' :
             interactive_new_group( player1 )
+
+         if choice1 == 'e' :
+            interactive_edit_group( player1 )
 
          player1.print_state()
          choice1 = menu2( player1 )
