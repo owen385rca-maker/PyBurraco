@@ -235,6 +235,10 @@ def menu1( player ) :
 
 def menu2( player ) :
 
+   ncnig, ncnig_nwc = get_ncards_not_in_group( player.hand, player.group_list )
+
+
+
    message = '''
 
      pick one:
@@ -242,13 +246,15 @@ def menu2( player ) :
        n - new group
        e - edit group
        r - remove group
-       q - quit
+       q - quit'''
 
-       '''
+   if ncnig == 0 :
+      print('       g - go down!')
+   print()
 
    answ = input( message )
 
-   possibilities = ['d','n','e','r','q']
+   possibilities = ['d','n','e','r','q','g']
    if answ not in possibilities :
       print('try again')
       return menu2( player )
@@ -3535,6 +3541,21 @@ if __name__ == '__main__':
 
          if choice1 == 'e' :
             interactive_edit_group( player1 )
+
+         ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
+         if ncnig1 == 0 and choice1 == 'g' :
+            print('\n\n player 1 going down!\n\n')
+            for gr in player1.group_list :
+               still_in_hand = False
+               board_group = group( gr.cards, gr.is_a_run, still_in_hand )
+               player1.board_groups.append( board_group )
+            player1.group_list = []
+            player1.down = True
+            player1.hand = decks[-11:]
+            decks = decks[:-11]
+            player1.hand.sort()
+
+
 
          player1.print_state()
          choice1 = menu2( player1 )
