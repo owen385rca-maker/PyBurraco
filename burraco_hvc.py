@@ -242,19 +242,36 @@ def menu2( player ) :
    message = '''
 
      pick one:
+       a - autogroup
        d - choose discard
        n - new group
        e - edit group
        r - remove group
-       q - quit'''
+       w - release a deployed wildcard not in a group
+       q - quit
+'''
+   print( message, end='' )
 
-   if ncnig == 0 :
+   possibilities = ['a','d','n','e','r','w','q']
+
+   if ncnig == 0 and not player.down :
       print('       g - go down!')
+      possibilities.append('g')
+
+   if player.down :
+      print('-----------------')
+      print('       m - move group from hand to board')
+      print('       c - auto add cards to board groups')
+      print('       p - manually put cards in board groups')
+      possibilities.append('m')
+      possibilities.append('c')
+      possibilities.append('p')
+
+
    print()
 
-   answ = input( message )
+   answ = input( ' pick one ' )
 
-   possibilities = ['d','n','e','r','q','g']
    if answ not in possibilities :
       print('try again')
       return menu2( player )
@@ -264,6 +281,133 @@ def menu2( player ) :
       exit()
 
    return answ
+
+#----------------------------------------
+def interactive_release_a_deployed_wildcard_not_in_group( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   deployed_wildcards_not_in_groups = []
+   for pc in player.hand :
+      if not is_in_a_group( pc, player.group_list ) :
+         if is_deployed_wildcard( pc ) :
+            deployed_wildcards_not_in_groups.append( pc )
+
+   if len( deployed_wildcards_not_in_groups ) == 0 :
+      print(' *** did not find any deployed wildcards not in groups')
+      return
+
+   pci = 1
+   for pc in deployed_wildcards_not_in_groups :
+      print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
+      pci += 1
+
+   answ = input( 'pick one:  ' )
+
+   try :
+      intansw = int(answ)
+   except :
+      print(' not an int.  try again.')
+      interactive_release_a_deployed_wildcard_not_in_group( player )
+
+   if intansw < 1 or intansw > len( deployed_wildcards_not_in_groups ) :
+      print('out of range.  try again')
+      interactive_release_a_deployed_wildcard_not_in_group( player )
+
+   deployed_wc = deployed_wildcards_not_in_groups[ intansw-1 ]
+
+   true_wc = get_true_card( deployed_wc )
+   print('\n returning wildcard %d deployed as %.5d ' % (true_wc, deployed_wc) )
+   player.hand.remove( deployed_wc )
+   player.hand.append( true_wc )
+   player.hand.sort()
+   player.wildcard_identity.pop( true_wc )
+
+   return
+
+
+
+#----------------------------------------
+def interactive_auto_add_cards_to_board( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   check_for_deployed_wc_replacement_in_board_groups( player.hand, player.board_groups, player.wildcard_identity, verb_level=verb_level )
+   add_cards_to_board_groups( player, verb_level=verb_level )
+   add_cards_with_wc_to_board_groups( player, verb_level=verb_level )
+
+   return
+
+#----------------------------------------
+def interactive_move_group_from_hand_to_board( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   if len( player.group_list ) == 0 :
+      print('  no groups to move.')
+      return
+
+   gri = 1
+   for gr in player.group_list :
+      print('  %2d : ' % gri, end='' )
+      gr.print_group2()
+      gri += 1
+
+   answ = input( 'pick one:  ' )
+
+   try :
+      intansw = int(answ)
+   except :
+      print(' not an int.  try again.')
+      interactive_move_group_from_hand_to_board( player )
+
+   if intansw < 1 or intansw > len( player.group_list ) :
+      print('out of range.  try again')
+      interactive_move_group_from_hand_to_board( player )
+
+   group_to_move = player.group_list[ intansw-1 ]
+   print('  moving this group from hand to board : ', end='' )
+   group_to_move.print_group2()
+
+   for pc in group_to_move.cards :
+      player.hand.remove( pc )
+
+   still_in_hand = False
+   board_group = group( group_to_move.cards, group_to_move.is_a_run, still_in_hand )
+   player.board_groups.append( board_group )
+
+   player.group_list.remove( group_to_move )
+
+   return
+
+
+#----------------------------------------
+def interactive_autogroup( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   print('  - check_for_groups')
+   player.group_list = check_for_groups( player.hand, verb_level=verb_level )
+   joker_list = get_jokers( player.hand )
+   print('  - check_for_wc_groups with jokers')
+   joker_group_list, player.hand, player.wildcard_identity = check_for_wc_groups( joker_list, player.hand, player.group_list, decks, player.wildcard_identity, rng, verb_level=verb_level )
+   two_list = get_twos( player.hand, player.group_list, player.wildcard_identity )
+   print('  - check_for_wc_groups with twos')
+   two_group_list, player.hand, player.wildcard_identity = check_for_wc_groups( two_list, player.hand, player.group_list, decks, player.wildcard_identity, rng, verb_level=verb_level )
+   print('  - check_for_groups')
+   player.group_list = check_for_groups( player.hand, verb_level=verb_level )
+   print('  - check_for_nofakind_groups')
+   nofakind_group_list = check_for_nofakind_groups( player.hand, player.group_list, verb_level=verb_level )
+
+   return
 
 #----------------------------------------
 
@@ -3542,6 +3686,12 @@ if __name__ == '__main__':
          if choice1 == 'e' :
             interactive_edit_group( player1 )
 
+         if choice1 == 'a' :
+            interactive_autogroup( player1 )
+
+         if choice1 == 'w' :
+            interactive_release_a_deployed_wildcard_not_in_group( player1 )
+
          ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
          if ncnig1 == 0 and choice1 == 'g' :
             print('\n\n player 1 going down!\n\n')
@@ -3556,6 +3706,11 @@ if __name__ == '__main__':
             player1.hand.sort()
 
 
+         if choice1 == 'm' :
+            interactive_move_group_from_hand_to_board( player1 )
+
+         if choice1 == 'c' :
+            interactive_auto_add_cards_to_board( player1 )
 
          player1.print_state()
          choice1 = menu2( player1 )
@@ -3563,6 +3718,27 @@ if __name__ == '__main__':
       if choice1 == 'd' :
          interactive_choose_discard( player1, pile )
 
+      ncnig1, ncnig_nwc1 = get_ncards_not_in_group( player1.hand, player1.group_list )
+      if ncnig1 == 0 and not player1.down :
+         answ = ''
+         while answ != 'y' and answ != 'n' :
+            answ = input('\n  do you want to go down? (y,n) : ')
+         if answ == 'y' :
+            print('\n\n player 1 going down!\n\n')
+            for gr in player1.group_list :
+               still_in_hand = False
+               board_group = group( gr.cards, gr.is_a_run, still_in_hand )
+               player1.board_groups.append( board_group )
+            player1.group_list = []
+            player1.down = True
+            player1.hand = decks[-11:]
+            decks = decks[:-11]
+            player1.hand.sort()
+      elif ncnig1 == 0 and player1.down :
+         print('\n\n\n >>>>>>>   You won!  <<<<<<<<<<<<<\n\n')
+         player1.print_state()
+         player2.print_state()
+         exit()
 
 
       player1.print_state()
