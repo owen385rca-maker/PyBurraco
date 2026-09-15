@@ -544,11 +544,11 @@ def interactive_choose_discard( player, pile ) :
       intansw = int(answ)
    except :
       print(' not an int.  try again.')
-      interactive_choose_discard( player, pile )
+      return interactive_choose_discard( player, pile )
 
    if intansw < 1 or intansw > n_choices :
       print('out of range.  try again')
-      interactive_choose_discard( player, pile )
+      return interactive_choose_discard( player, pile )
 
    pc_discard = card_choices[ intansw-1 ]
 
