@@ -204,8 +204,14 @@ class player :
       print('  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
 
 #----------------------------------------
+def print_cards( cards ) :
+   for pc in cards :
+      print(' %s, ' % key_to_string(pc), end='' )
+   return
 
-def menu1( player ) :
+#----------------------------------------
+
+def menu1( player, pile ) :
 
    message = '''
 
@@ -216,13 +222,20 @@ def menu1( player ) :
 
        '''
 
-   answ = input( message )
+   print('\n  pick one:')
+   print('    d - card from deck')
+   print('    p - pickup pile : ', end='' )
+   print_cards( pile )
+   print(' - ', pile)
+   print('    q - quit\n')
+
+   answ = input( 'your choice: ' )
 
    possibilities = ['d','p','q']
 
    if answ not in possibilities :
       print('try again')
-      return menu1( player )
+      return menu1( player, pile )
 
    if answ == 'q' :
       print('\n\n goodbye\n\n' )
@@ -3793,7 +3806,7 @@ if __name__ == '__main__':
 
       player1.print_state()
 
-      choice1 = menu1( player1 )
+      choice1 = menu1( player1, pile )
 
 
       turn_cards = []
