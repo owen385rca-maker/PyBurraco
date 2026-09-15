@@ -282,6 +282,120 @@ def menu2( player ) :
 
    return answ
 
+
+
+#----------------------------------------
+def remove_duplicate_ace_if_exists( pc, player ) :
+
+   cn = get_card( pc )
+
+   if cn == 1 :
+      duplicate_pc = pc + 13*10
+   elif cn == 14 :
+      duplicate_pc = pc - 13*10
+   else :
+      print(' *** remove_duplicate_ace_if_exists : pc is not an ace??? %d' % pc )
+      return
+
+   if is_in_a_group( duplicate_pc, player.group_list ) :
+      print('  remove_duplicate_ace_if_exists : duplicate to remove %d is in a group.  Fix this!' % duplicate_pc )
+      for gr in player.group_list :
+         gr.print_group2()
+      exit()
+   if duplicate_pc in player.hand :
+      player.hand.remove( duplicate_pc )
+
+   return
+
+
+
+#----------------------------------------
+def undouble_aces_not_in_groups( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   if verb_level > 0 :
+      print('  undouble_aces_not_in_groups : hand at beginning : ', player.hand )
+
+   remove_list = []
+   for pc in player.hand :
+
+      cn = get_card( pc )
+
+      if cn != 1 : continue
+
+      duplicate_pc = pc + 13*10
+
+      if duplicate_pc not in player.hand :
+         if verb_level > 0 :
+            print('  undouble_aces_not_in_groups : duplicate %d of %d not in hand so nothing to remove.' % (duplicate_pc, pc) )
+         continue
+
+      pc_in_a_group = is_in_a_group( pc, player.group_list )
+      duplicate_pc_in_a_group = is_in_a_group( duplicate_pc, player.group_list )
+
+      if pc_in_a_group and duplicate_pc_in_a_group :
+         print('\n\n\n *** undouble_aces_not_in_groups : both %d and its duplicate %d are in groups.  Fix this!' % (pc, duplicate_pc) )
+         for gr in player.group_list:
+            gr.print_group2()
+         print('\n\n\n')
+         exit()
+
+      if not duplicate_pc_in_a_group :
+         if verb_level > 0 :
+            print('  undouble_aces_not_in_groups : %d not in a group.  removing it.' % (duplicate_pc) )
+         remove_list.append( duplicate_pc )
+      else :
+         if verb_level > 0 :
+            print('  undouble_aces_not_in_groups : duplicate %d is in a group, so removing ace in position 1.' % duplicate_pc )
+         remove_list.append( pc )
+
+   for pc in remove_list :
+      if verb_level > 0 :
+         print('  undouble_aces_not_in_groups : removing %d from hand' % pc )
+      player.hand.remove( pc )
+
+   if verb_level > 0 :
+      print('  undouble_aces_not_in_groups : hand at end : ', player.hand )
+
+   return
+
+
+
+#----------------------------------------
+def double_aces_not_in_groups( player, **kwargs ) :
+
+   verb_level = 0
+   if 'verb_level' in kwargs :
+      verb_level = kwargs['verb_level']
+
+   cards_not_in_group = get_cards_not_in_group( player.hand, player.group_list )
+
+   for pc in cards_not_in_group :
+
+      cn = get_card( pc )
+
+      if cn != 1 : continue
+
+      duplicate_pc = pc + 13*10
+
+      if duplicate_pc in player.hand :
+         print('  *** double_aces_not_in_groups :  duplicate %d already in hand.' % duplicate_pc )
+         continue
+
+      if verb_level > 0 :
+         print('  double_aces_not_in_groups :  adding duplicate of ace %d to hand' % duplicate_pc )
+
+      if duplicate_pc not in player.hand :
+         player.hand.append( duplicate_pc )
+         player.hand.sort()
+
+   return
+
+
+
 #----------------------------------------
 def interactive_release_a_deployed_wildcard_not_in_group( player, **kwargs ) :
 
@@ -935,6 +1049,10 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
          board_groups.remove( old_group )
          board_groups.append( new_group )
 
+         for lpc in new_group.cards :
+            cn = get_card( lpc )
+            if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
+
          if verb_level > 0 :
             player.print_state()
 
@@ -981,6 +1099,8 @@ def add_cards_to_board_groups( player, **kwargs ) :
                gr.cards.append( pc )
                gr.cards.sort()
                placed_cards_list.append( pc )
+               cn = get_card( pc )
+               if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
                break
 
       for pc in placed_cards_list :
@@ -2736,6 +2856,9 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
                gr.cards.append( pc )
                gr.cards.sort()
 
+               cn = get_card( pc )
+               if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
+
                true_wc_pc = get_true_wildcard_from_fake_card( wcpc, wildcard_identity )
                if true_wc_pc == 0 :
                   print(' *** check_for_deployed_wc_replacement_in_board_groups : cant get true identity for deployed wc %d' % wcpc )
@@ -3000,6 +3123,8 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
    ncnig, ncnig_nwc = get_ncards_not_in_group( player.hand, player.group_list )
 
+   double_aces_not_in_groups( player )
+
    if down :
       nburracos = count_number_of_burracos( board_groups )
       if nburracos > 0 or ncnig > 2 :
@@ -3011,6 +3136,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
 
 
    check_for_deployed_wc_replacement_in_hand( hand, new_cards, wildcard_identity, verb_level=verb_level )
+
 
    group_list = check_for_groups( hand, verb_level=0 )
 
@@ -3160,6 +3286,7 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
          if verb_level > 0 :
             player.print_state()
 
+   undouble_aces_not_in_groups( player )
 
    best_run_suit, best_run_count, best_run_first_card = best_run( hand )
 
@@ -3494,6 +3621,26 @@ def check_all_cards( player1, player2, decks, pile, **kwargs ) :
                all_cards.append( get_true_wildcard_from_fake_card( pc, player2.wildcard_identity) )
             else :
                all_cards.append( pc )
+
+   removal_list = []
+   addition_list = []
+   for pc in all_cards :
+      cn = get_card( pc )
+      if cn == 14 :
+         removal_list.append( pc )
+         original_ace = pc - 13*10
+         if original_ace not in all_cards :
+            addition_list.append( original_ace )
+   for pc in removal_list :
+      if verb_level > 1 :
+         print('  removing duplicate ace: %d' % pc )
+      all_cards.remove( pc )
+   for pc in addition_list :
+      if verb_level > 1 :
+         print('  adding back ace: %d' % pc )
+      all_cards.append( pc )
+
+
    all_cards.sort()
 
    if verb_level > 1 :
