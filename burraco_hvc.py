@@ -3895,7 +3895,7 @@ if __name__ == '__main__':
             decks = decks[:-11]
             player1.hand.sort()
       elif ncnig1 == 0 and player1.down :
-         print('\n\n\n >>>>>>>   You won!  <<<<<<<<<<<<<\n\n')
+         print('\n\n\n >>>>>>>   You won in turn %d!  <<<<<<<<<<<<<\n\n' % ti)
          player1.print_state()
          player2.print_state()
          exit()
@@ -3903,7 +3903,7 @@ if __name__ == '__main__':
 
       player1.print_state()
 
-      answ = input(' pausing...')
+      answ = input(' pausing, middle of turn %d...' % ti)
       if answ == 'q' : exit()
       if answ == 'c' : batch = True
 
@@ -3986,7 +3986,7 @@ if __name__ == '__main__':
       check_all_cards( player1, player2, decks, pile, verb_level=1 )
 
       if not batch :
-         answ = input(' pausing...')
+         answ = input(' pausing, end of turn %d ...' % ti)
          if answ == 'q' : exit()
          if answ == 'c' : batch = True
 
