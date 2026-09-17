@@ -463,9 +463,11 @@ def interactive_auto_add_cards_to_board( player, **kwargs ) :
    if 'verb_level' in kwargs :
       verb_level = kwargs['verb_level']
 
+   verb_level = 1 # debug
    check_for_deployed_wc_replacement_in_board_groups( player.hand, player.board_groups, player.wildcard_identity, verb_level=verb_level )
    add_cards_to_board_groups( player, verb_level=verb_level )
    add_cards_with_wc_to_board_groups( player, verb_level=verb_level )
+   verb_level = 0 # debug
 
    return
 
