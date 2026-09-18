@@ -2872,7 +2872,7 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
                gr.cards.sort()
 
                cn = get_card( pc )
-               if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
+               ##### if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
 
                true_wc_pc = get_true_wildcard_from_fake_card( wcpc, wildcard_identity )
                if true_wc_pc == 0 :
