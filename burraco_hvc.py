@@ -1066,7 +1066,7 @@ def add_cards_with_wc_to_board_groups( player, **kwargs ) :
 
          for lpc in new_group.cards :
             cn = get_card( lpc )
-            if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
+            if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( lpc, player )
 
          if verb_level > 0 :
             player.print_state()
@@ -2872,7 +2872,6 @@ def check_for_deployed_wc_replacement_in_board_groups( hand, board_groups, wildc
                gr.cards.sort()
 
                cn = get_card( pc )
-               ##### if cn == 1 or cn == 14 : remove_duplicate_ace_if_exists( pc, player )
 
                true_wc_pc = get_true_wildcard_from_fake_card( wcpc, wildcard_identity )
                if true_wc_pc == 0 :
@@ -3224,7 +3223,6 @@ def play_turn_new_cards( new_cards, decks, rng, player, **kwargs ) :
       nb = count_number_of_burracos( board_groups )
 
       ok_to_add = True
-      #########if len( hand_after_adding_groups ) == 0 :
       if len( hand_after_adding_groups ) == 0 or ( len( hand_after_adding_groups) == 1 and nb == 0 ) :
          ok_to_add = False
          if verb_level > 0 :
