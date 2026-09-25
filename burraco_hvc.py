@@ -523,6 +523,8 @@ def interactive_autogroup( player, **kwargs ) :
    if 'verb_level' in kwargs :
       verb_level = kwargs['verb_level']
 
+   print('  - double_aces_not_in_groups')
+   double_aces_not_in_groups( player )
    print('  - check_for_groups')
    player.group_list = check_for_groups( player.hand, verb_level=verb_level )
    joker_list = get_jokers( player.hand )
@@ -535,6 +537,8 @@ def interactive_autogroup( player, **kwargs ) :
    player.group_list = check_for_groups( player.hand, verb_level=verb_level )
    print('  - check_for_nofakind_groups')
    nofakind_group_list = check_for_nofakind_groups( player.hand, player.group_list, verb_level=verb_level )
+   print('  - undouble_aces_not_in_groups')
+   undouble_aces_not_in_groups( player )
 
    return
 
@@ -755,7 +759,7 @@ def interactive_edit_group( player ) :
          pci = 1
          card_choices = []
          for pc in group_to_edit.cards :
-            if not is_in_a_group( pc, player.group_list ) :
+            ########if not is_in_a_group( pc, player.group_list ) :
                print('  %2d : %d  %s' % (pci, pc, key_to_string(pc)) )
                card_choices.append( pc )
                pci += 1
@@ -1923,7 +1927,8 @@ def max_consecutive_count_with_wc2( hand, suit ) :
    wc_candidate_positions = []
    #print(' suit cards: ', end='')
    #print( suit_cards )
-   for i in range(1,14) :
+   #######for i in range(1,14) :
+   for i in range(1,15) :
       if i in suit_cards : continue
       if (i-1) in suit_cards or (i+1) in suit_cards :
          #print(' %d is candidate wc position.' % i )
